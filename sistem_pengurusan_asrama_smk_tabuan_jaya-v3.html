@@ -1,0 +1,2469 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Pengurusan Asrama • SMK Tabuan Jaya</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        #print-isolated-stage {
+            display: none;
+        }
+        .iso-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+        .iso-table th, .iso-table td {
+            border: 1px solid #334155;
+            padding: 6px 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+        .iso-table th {
+            background-color: #f1f5f9;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        @media print {
+            body.printing-isolated > *:not(#print-isolated-stage) {
+                display: none !important;
+            }
+            body.printing-isolated #print-isolated-stage {
+                display: block !important;
+                padding: 16px;
+                background: #ffffff;
+                color: #0f172a;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-900 min-h-screen antialiased">
+
+    <!-- PENTAS CETAKAN TERASING -->
+    <div id="print-isolated-stage"></div>
+
+    <!-- SKRIN LOG MASUK -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0b1730] via-[#13264d] to-[#064e3b] p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200">
+            <div class="bg-[#0b1730] text-white px-6 py-5 flex items-center justify-between gap-4">
+                <div>
+                    <div class="text-[11px] font-extrabold uppercase tracking-wider text-amber-300">Kementerian Pendidikan Malaysia • SSN Sarawak</div>
+                    <h1 class="text-lg sm:text-xl font-black mt-0.5">Sistem Pengurusan Asrama SMK Tabuan Jaya</h1>
+                    <p class="text-xs text-slate-300 mt-0.5">Log masuk staf asrama, warden bertugas, penyelia &amp; pembantu warden</p>
+                </div>
+                <div class="hidden sm:flex flex-col items-end text-right">
+                    <span class="px-3 py-1 rounded-full bg-amber-400 text-slate-950 text-[11px] font-extrabold">Sesi 2026</span>
+                    <span class="text-[10px] text-slate-300 mt-1">Kuching, Sarawak</span>
+                </div>
+            </div>
+
+            <div class="p-6">
+                <form onsubmit="prosesLogin(event)" class="space-y-4">
+                    <div>
+                        <label for="login-username" class="block text-xs font-bold text-slate-700 mb-1">ID Pengguna / Nama Staf</label>
+                        <input type="text" id="login-username" required placeholder="Masukkan ID atau Nama Staf"
+                               class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#0b1730]">
+                    </div>
+                    <div>
+                        <label for="login-password" class="block text-xs font-bold text-slate-700 mb-1">Kata Laluan</label>
+                        <div class="relative">
+                            <input type="password" id="login-password" required placeholder="Masukkan kata laluan"
+                                   class="w-full px-3.5 py-2.5 pr-16 rounded-xl border border-slate-300 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-[#0b1730]">
+                            <button type="button" onclick="togglePasswordVisibility()"
+                                    class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-600 hover:text-slate-900 cursor-pointer">
+                                Lihat
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="login-error" class="hidden rounded-xl bg-rose-50 border border-rose-200 px-3 py-2 text-xs font-bold text-rose-700"></div>
+
+                    <button type="submit"
+                            class="w-full bg-[#047857] hover:bg-[#065f46] text-white font-extrabold text-xs py-3 rounded-xl shadow transition cursor-pointer">
+                        Log Masuk ke Sistem Asrama
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- KERANGKA UTAMA APLIKASI -->
+    <div id="app-shell" class="hidden min-h-screen flex-col">
+        <!-- HEADER ATAS -->
+        <header class="bg-[#0b1730] text-white shadow-lg sticky top-0 z-30">
+            <div class="px-3 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-400 text-slate-950 font-black flex items-center justify-center text-sm shadow">
+                        TJ
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h1 class="text-sm sm:text-base font-black tracking-tight">Pengurusan Asrama • SMK Tabuan Jaya</h1>
+                            <span class="hidden md:inline-block px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-400/30">SSN Sarawak</span>
+                        </div>
+                        <p class="text-[11px] text-slate-300">
+                            Pengguna: <strong id="active-user-name" class="text-amber-300">Cikgu Kolan</strong>
+                            (<span id="active-user-role">Ketua Warden</span>)
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <button type="button" id="btn-kelola-akaun" onclick="bukaModalAkaun()"
+                            class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition cursor-pointer">
+                        Akaun Staf
+                    </button>
+                    <button type="button" id="btn-reset-data" onclick="resetData()"
+                            class="px-3 py-1.5 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 text-amber-200 border border-amber-300/30 text-xs font-bold transition cursor-pointer">
+                        Reset Data
+                    </button>
+                    <button type="button" onclick="prosesLogout()"
+                            class="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold shadow transition cursor-pointer">
+                        Logout
+                    </button>
+                </div>
+            </div>
+
+            <!-- BAR NAVIGASI MODUL -->
+            <nav class="bg-[#112244] border-t border-white/10 px-3 sm:px-6 lg:px-8 py-2 flex items-center gap-1.5 overflow-x-auto">
+                <button type="button" id="nav-00" onclick="bukaModul('00')"
+                        class="flex items-center gap-2 px-3.5 sm:px-4 py-1.5 rounded-xl text-xs font-extrabold bg-amber-400 text-slate-950 whitespace-nowrap cursor-pointer">
+                    00 Dashboard
+                </button>
+                <button type="button" id="nav-01" onclick="bukaModul('01')"
+                        class="flex items-center gap-2 px-3.5 sm:px-4 py-1.5 rounded-xl text-xs font-semibold text-slate-200 hover:bg-white/10 whitespace-nowrap transition cursor-pointer">
+                    01 Organisasi &amp; Jadual
+                </button>
+                <button type="button" id="nav-02" onclick="bukaModul('02')"
+                        class="flex items-center gap-2 px-3.5 sm:px-4 py-1.5 rounded-xl text-xs font-semibold text-slate-200 hover:bg-white/10 whitespace-nowrap transition cursor-pointer">
+                    02 Bilik &amp; Penghuni
+                </button>
+                <button type="button" id="nav-03" onclick="bukaModul('03')"
+                        class="flex items-center gap-2 px-3.5 sm:px-4 py-1.5 rounded-xl text-xs font-semibold text-slate-200 hover:bg-white/10 whitespace-nowrap transition cursor-pointer">
+                    03 Operasi &amp; Laporan
+                </button>
+                <button type="button" id="nav-04" onclick="bukaModul('04')"
+                        class="flex items-center gap-2 px-3.5 sm:px-4 py-1.5 rounded-xl text-xs font-semibold text-slate-200 hover:bg-white/10 whitespace-nowrap transition cursor-pointer">
+                    04 Kecemasan &amp; Aduan
+                </button>
+            </nav>
+        </header>
+
+        <!-- KANDUNGAN UTAMA -->
+        <main class="flex-1 px-3 sm:px-6 lg:px-8 py-6 space-y-6 max-w-7xl w-full mx-auto">
+
+            <!-- MODUL 00: DASHBOARD -->
+            <section id="mod-00" class="space-y-6">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 sm:p-6 flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <span class="inline-block px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-extrabold uppercase">Ringkasan Operasi Asrama</span>
+                        <h2 class="text-lg sm:text-xl font-black text-slate-900 mt-1.5">Papan Pemuka Unit Pengurusan Asrama SMK Tabuan Jaya</h2>
+                        <p class="text-xs text-slate-500 mt-0.5">Pantau enrolmen penghuni Aspura &amp; Aspuri, warden bertugas, laporan harian dan status aduan kerosakan.</p>
+                    </div>
+                    <button type="button" onclick="cetakMenuAktif()"
+                            class="bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-extrabold px-4 py-2.5 rounded-xl shadow-sm transition cursor-pointer">
+                        &#128424; Cetak Ringkasan
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                        <div class="text-xs font-bold text-slate-500">Enrolmen Penghuni</div>
+                        <div class="mt-2 flex items-baseline gap-2">
+                            <span id="dash-occ" class="text-2xl font-black text-slate-900">0</span>
+                            <span class="text-xs font-bold text-slate-400">/ <span id="dash-cap">0</span> Katil</span>
+                        </div>
+                        <div id="dash-split" class="text-[11px] font-semibold text-sky-700 mt-2">Aspura: 0 &bull; Aspuri: 0</div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                        <div class="text-xs font-bold text-slate-500">Warden Bertugas Semasa</div>
+                        <div id="dash-duty-main" class="text-base font-black text-blue-800 mt-2">-</div>
+                        <div class="text-[11px] text-slate-500 mt-1">Standby: <strong id="dash-duty-sub" class="text-slate-700">-</strong></div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                        <div class="text-xs font-bold text-slate-500">Laporan Harian Warden</div>
+                        <div id="dash-harian-count" class="text-2xl font-black text-emerald-700 mt-2">0</div>
+                        <div class="text-[11px] text-slate-500 mt-2">Rekod pemantauan harian tersimpan</div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                        <div class="text-xs font-bold text-slate-500">Aduan Kerosakan Aktif</div>
+                        <div id="dash-rosak-count" class="text-2xl font-black text-rose-600 mt-2">0</div>
+                        <div class="text-[11px] text-slate-500 mt-2">Belum selesai dibaiki</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <button type="button" onclick="bukaModul('01', 'jadual')" class="text-left bg-white hover:bg-slate-50 rounded-2xl border border-slate-200 p-5 shadow-sm transition cursor-pointer">
+                        <div class="text-xs font-extrabold text-blue-700">MODUL 01</div>
+                        <div class="text-sm font-black text-slate-900 mt-1">Jadual Warden &amp; Menu Makanan</div>
+                        <p class="text-xs text-slate-500 mt-1">Semak senarai staf, giliran bertugas mingguan, lawatan mengejut dan menu kitaran 4 minggu.</p>
+                    </button>
+                    <button type="button" onclick="bukaModul('03', 'harian')" class="text-left bg-white hover:bg-slate-50 rounded-2xl border border-slate-200 p-5 shadow-sm transition cursor-pointer">
+                        <div class="text-xs font-extrabold text-emerald-700">MODUL 03</div>
+                        <div class="text-sm font-black text-slate-900 mt-1">Laporan Harian, Roll Call &amp; Prep</div>
+                        <p class="text-xs text-slate-500 mt-1">Catat laporan pemantauan harian warden, kehadiran roll call, kes kesihatan dan prep malam.</p>
+                    </button>
+                    <button type="button" onclick="bukaModul('04', 'kerosakan')" class="text-left bg-white hover:bg-slate-50 rounded-2xl border border-slate-200 p-5 shadow-sm transition cursor-pointer">
+                        <div class="text-xs font-extrabold text-rose-700">MODUL 04</div>
+                        <div class="text-sm font-black text-slate-900 mt-1">Kecemasan, Disiplin &amp; Kerosakan</div>
+                        <p class="text-xs text-slate-500 mt-1">Akses talian kecemasan, rekod kes disiplin/kecemasan serta aduan kerosakan blok asrama.</p>
+                    </button>
+                </div>
+            </section>
+
+            <!-- MODUL 01: ORGANISASI & JADUAL -->
+            <section id="mod-01" class="hidden space-y-5">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-2 flex items-center gap-1.5 overflow-x-auto">
+                    <button type="button" id="s01-staf" onclick="bukaSub01('staf')" class="px-4 py-2 rounded-xl text-xs font-bold bg-[#0b1730] text-white whitespace-nowrap cursor-pointer">1.1 Staf Asrama</button>
+                    <button type="button" id="s01-jadual" onclick="bukaSub01('jadual')" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">1.2 Jadual Bertugas</button>
+                    <button type="button" id="s01-lawatan" onclick="bukaSub01('lawatan')" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">1.3 Lawatan Mengejut</button>
+                    <button type="button" id="s01-menu" onclick="bukaSub01('menu')" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">1.4 Menu Makanan</button>
+                </div>
+
+                <!-- 1.1 STAF -->
+                <div id="p01-staf" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900">1.1 Senarai Warden, Pembantu Warden &amp; Penyelia Asrama</h3>
+                            <p class="text-xs text-slate-500">Maklumat perjawatan, zon seliaan blok dan nombor telefon perhubungan.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="bukaBorang('staf', -1)" class="bg-[#0b1730] hover:bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-xl cursor-pointer">+ Tambah Staf</button>
+                            <button type="button" onclick="cetakTerasing('m01-staf')" class="bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-extrabold px-4 py-2 rounded-xl cursor-pointer">&#128424; Cetak Senarai</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-200 text-slate-600">
+                                    <th class="py-3 px-4">Bil</th>
+                                    <th class="py-3 px-4">Nama Penuh</th>
+                                    <th class="py-3 px-4">Jawatan</th>
+                                    <th class="py-3 px-4">Zon / Blok Seliaan</th>
+                                    <th class="py-3 px-4">No. Telefon</th>
+                                    <th class="py-3 px-3 text-right">Tindakan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tb-staf" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 1.2 JADUAL BERTUGAS -->
+                <div id="p01-jadual" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900">1.2 Jadual Bertugas Mingguan Warden</h3>
+                            <p class="text-xs text-slate-500">Giliran warden bertugas harian dan warden standby mengikut bulan.</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <select id="filter-bulan-jadual" onchange="paparModul01()" class="px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white"></select>
+                            <button type="button" onclick="bukaBorang('jadual', -1)" class="bg-[#0b1730] hover:bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-xl cursor-pointer">+ Tambah Jadual</button>
+                            <button type="button" onclick="cetakTerasing('m01-jadual')" class="bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-extrabold px-4 py-2 rounded-xl cursor-pointer">&#128424; Cetak Jadual</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-200 text-slate-600">
+                                    <th class="py-3 px-4">Bulan</th>
+                                    <th class="py-3 px-4">Tarikh / Hari</th>
+                                    <th class="py-3 px-4">Warden Bertugas</th>
+                                    <th class="py-3 px-4">Warden Standby</th>
+                                    <th class="py-3 px-4">Catatan</th>
+                                    <th class="py-3 px-3 text-right">Tindakan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tb-jadual" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 1.3 LAWATAN MENGEJUT -->
+                <div id="p01-lawatan" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900">1.3 Jadual &amp; Rekod Lawatan Mengejut</h3>
+                            <p class="text-xs text-slate-500">Pemantauan blok, lampu padam, disiplin dan keselamatan asrama.</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <select id="filter-bulan-lawatan" onchange="paparModul01()" class="px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white"></select>
+                            <button type="button" onclick="bukaBorang('lawatan', -1)" class="bg-[#0b1730] hover:bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-xl cursor-pointer">+ Tambah Lawatan</button>
+                            <button type="button" onclick="cetakTerasing('m01-lawatan')" class="bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-extrabold px-4 py-2 rounded-xl cursor-pointer">&#128424; Cetak Lawatan</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-200 text-slate-600">
+                                    <th class="py-3 px-4">Bulan</th>
+                                    <th class="py-3 px-4">Tarikh</th>
+                                    <th class="py-3 px-4">Masa</th>
+                                    <th class="py-3 px-4">Zon / Blok</th>
+                                    <th class="py-3 px-4">Warden</th>
+                                    <th class="py-3 px-4">Catatan</th>
+                                    <th class="py-3 px-3 text-right">Tindakan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tb-lawatan" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 1.4 MENU MAKANAN -->
+                <div id="p01-menu" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900">1.4 Jadual Menu Makanan Kitaran 4 Minggu</h3>
+                            <p class="text-xs text-slate-500">Rujukan sajian harian dewan makan atlet SSN Sarawak.</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <div class="bg-slate-100 p-1 rounded-xl flex items-center gap-1">
+                                <button type="button" id="mbtn-1" onclick="pilihMingguMenu(1)" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-[#0b1730] text-white cursor-pointer">Minggu 1</button>
+                                <button type="button" id="mbtn-2" onclick="pilihMingguMenu(2)" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200 cursor-pointer">Minggu 2</button>
+                                <button type="button" id="mbtn-3" onclick="pilihMingguMenu(3)" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200 cursor-pointer">Minggu 3</button>
+                                <button type="button" id="mbtn-4" onclick="pilihMingguMenu(4)" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200 cursor-pointer">Minggu 4</button>
+                            </div>
+                            <button type="button" onclick="bukaBorang('menu', -1)" class="bg-[#0b1730] hover:bg-slate-800 text-white text-xs font-bold px-3.5 py-2 rounded-xl cursor-pointer">+ Menu</button>
+                            <button type="button" onclick="cetakTerasing('m01-menu')" class="bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-extrabold px-3.5 py-2 rounded-xl cursor-pointer">&#128424; Cetak Menu</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-200 text-slate-600">
+                                    <th class="py-3 px-3">Hari</th>
+                                    <th class="py-3 px-3">Sarapan (6.00 pg)</th>
+                                    <th class="py-3 px-3">Rehat (9.00 pg)</th>
+                                    <th class="py-3 px-3">Tgh Hari (12.30 tgh)</th>
+                                    <th class="py-3 px-3">Petang (5.30 ptg)</th>
+                                    <th class="py-3 px-3">Malam (9.00 mlm)</th>
+                                    <th class="py-3 px-3 text-right">Tindakan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tb-menu" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- MODUL 02: BILIK & PENGHUNI -->
+            <section id="mod-02" class="hidden space-y-5">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-2 flex items-center gap-1.5 overflow-x-auto">
+                    <button type="button" id="s02-enrolmen" onclick="bukaSub02('enrolmen')" class="px-4 py-2 rounded-xl text-xs font-bold bg-[#0b1730] text-white whitespace-nowrap cursor-pointer">2.1 Enrolmen Bilik</button>
+                    <button type="button" id="s02-bilik" onclick="bukaSub02('bilik')" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">2.2 Penghuni &amp; Kepimpinan Bilik</button>
+                    <button type="button" id="s02-pengawas" onclick="bukaSub02('pengawas')" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer">2.3 Majlis Pengawas Asrama</button>
+                </div>
+
+                <!-- 2.1 ENROLMEN -->
+                <div id="p02-enrolmen" class="space-y-5">
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900">2.1 Enrolmen Penghuni Asrama Mengikut Bilik</h3>
+                            <p class="text-xs text-slate-500">Kapasiti katil, jumlah penghuni semasa dan kekosongan bagi blok Aspura &amp; Aspuri.</p>
+                        </div>
+                        <button type="button" onclick="cetakTerasing('m02-enrolmen')" class="bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-extrabold px-4 py-2 rounded-xl cursor-pointer">&#128424; Cetak Enrolmen</button>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-5 py-3.5 bg-sky-50 border-b border-sky-100 flex items-center justify-between">
+                                <h4 class="text-sm font-extrabold text-sky-950">Aspura — Blok Lelaki</h4>
+                                <span id="badge-aspura" class="px-2.5 py-0.5 rounded-full bg-sky-700 text-white text-[11px] font-bold">0 / 0 Katil</span>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse text-xs">
+                                    <thead>
+                                        <tr class="border-b border-slate-200 text-slate-500">
+                                            <th class="py-2.5 px-4">Bilik</th>
+                                            <th class="py-2.5 px-3">Kapasiti</th>
+                                            <th class="py-2.5 px-3">Penghuni</th>
+                                            <th class="py-2.5 px-3">Kosong</th>
+                                            <th class="py-2.5 px-3 text-right">Tindakan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tb-aspura" class="divide-y divide-slate-100"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <div class="px-5 py-3.5 bg-rose-50 border-b border-rose-100 flex items-center justify-between">
+                                <h4 class="text-sm font-extrabold text-rose-950">Aspuri — Blok Perempuan</h4>
+                                <span id="badge-aspuri" class="px-2.5 py-0.5 rounded-full bg-rose-700 text-white text-[11px] font-bold">0 / 0 Katil</span>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse text-xs">
+                                    <thead>
+                                        <tr class="border-b border-slate-200 text-slate-500">
+                                            <th class="py-2.5 px-4">Bilik</th>
+                                            <th class="py-2.5 px-3">Kapasiti</th>
+                                            <th class="py-2.5 px-3">Penghuni</th>
+                                            <th class="py-2.5 px-3">Kosong</th>
+                                            <th class="py-2.5 px-3 text-right">Tindakan</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tb-aspuri" class="divide-y divide-slate-100"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2.2 PENGHUNI & KEPIMPINAN BILIK -->
+                <div id="p02-bilik" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex flex-wrap items-center gap-3">
+                            <div>
+                                <h3 class="text-base font-extrabold text-slate-900">2.2 Senarai Penghuni &amp; Kepimpinan Bilik</h3>
+                                <p class="text-xs text-slate-500">Pilih bilik untuk melihat/mengemas kini penghuni dan struktur kepimpinan bilik.</p>
+                            </div>
+                            <select id="pilih-bilik" onchange="tukarBilik(this.value)" class="px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-extrabold bg-white"></select>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button type="button" onclick="bukaKepimpinanBilik()" class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold cursor-pointer">Sunting Kepimpinan</button>
+                            <button type="button" onclick="bukaBorang('penghuni', -1)" class="px-3.5 py-2 rounded-xl bg-[#0b1730] hover:bg-slate-800 text-white text-xs font-bold cursor-pointer">+ Tambah Penghuni</button>
+                            <button type="button" onclick="cetakTerasing('m02-bilik')" class="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-extrabold cursor-pointer">&#128424; Cetak Bilik</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-50 rounded-2xl p-4 border border-slate-200 text-xs">
+                        <div>
+                            <div class="text-[10px] font-bold text-slate-500 uppercase">Warden Bilik (PIC)</div>
+                            <div id="kp-pic" class="font-extrabold text-slate-900 mt-0.5">-</div>
+                        </div>
+                        <div>
+                            <div class="text-[10px] font-bold text-slate-500 uppercase">Pengawas Bilik</div>
+                            <div id="kp-pref" class="font-extrabold text-slate-900 mt-0.5">-</div>
+                        </div>
+                        <div>
+                            <div class="text-[10px] font-bold text-slate-500 uppercase">Ketua Bilik</div>
+                            <div id="kp-lead" class="font-extrabold text-slate-900 mt-0.5">-</div>
+                        </div>
+                        <div>
+                            <div class="text-[10px] font-bold text-slate-500 uppercase">Penolong Bilik</div>
+                            <div id="kp-asst" class="font-extrabold text-slate-900 mt-0.5">-</div>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-200 text-slate-600">
+                                    <th class="py-3 px-4">Bilik</th>
+                                    <th class="py-3 px-4">No. Katil</th>
+                                    <th class="py-3 px-4">Nama Murid</th>
+                                    <th class="py-3 px-4">Kelas</th>
+                                    <th class="py-3 px-4">Sukan</th>
+                                    <th class="py-3 px-3 text-right">Tindakan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tb-penghuni" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 2.3 MAJLIS PENGAWAS ASRAMA -->
+                <div id="p02-pengawas" class="hidden bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900">2.3 Majlis &amp; Exco Pengawas Asrama</h3>
+                            <p class="text-xs text-slate-500">Barisan kepimpinan pelajar asrama Aspura dan Aspuri.</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button type="button" onclick="bukaBorang('pengawas', -1)" class="px-3.5 py-2 rounded-xl bg-[#0b1730] hover:bg-slate-800 text-white text-xs font-bold cursor-pointer">+ Tambah Pengawas</button>
+                            <button type="button" onclick="cetakTerasing('m02-pengawas')" class="px-3.5 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-extrabold cursor-pointer">&#128424; Cetak Senarai</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="rounded-2xl border border-blue-200 bg-blue-50/40 p-4">
+                            <div class="text-[10px] font-extrabold uppercase text-blue-800">Ketua Pengawas Asrama (Aspura)</div>
+                            <div id="kp-aspura-nama" class="text-sm font-black text-slate-900 mt-1">-</div>
+                            <div id="kp-aspura-meta" class="text-xs text-slate-600 mt-1">-</div>
+                        </div>
+                        <div class="rounded-2xl border border-rose-200 bg-rose-50/40 p-4">
+                            <div class="text-[10px] font-extrabold uppercase text-rose-800">Ketua Pengawas Asrama (Aspuri)</div>
+                            <div id="kp-aspuri-nama" class="text-sm font-black text-slate-900 mt-1">-</div>
+                            <div id="kp-aspuri-meta" class="text-xs text-slate-600 mt-1">-</div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" id="pf-semua" onclick="setPenapisPengawas('semua')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-[#0b1730] text-white cursor-pointer">Semua</button>
+                            <button type="button" id="pf-aspura" onclick="setPenapisPengawas('aspura')" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer">Aspura</button>
+                            <button type="button" id="pf-aspuri" onclick="setPenapisPengawas('aspuri')" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer">Aspuri</button>
+                        </div>
+                        <input type="text" id="cari-pengawas" oninput="paparPengawas()" placeholder="Cari nama, kelas, bilik atau sukan..." class="px-3.5 py-1.5 rounded-xl border border-slate-300 text-xs w-full sm:w-64">
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 border-b border-slate-200 text-slate-600">
+                                    <th class="py-3 px-4">Jawatan</th>
+                                    <th class="py-3 px-4">Nama</th>
+                                    <th class="py-3 px-3">Kelas</th>
+                                    <th class="py-3 px-3">Bilik</th>
+                                    <th class="py-3 px-3">Sukan</th>
+                                    <th class="py-3 px-4">Tugas</th>
+                                    <th class="py-3 px-3 text-right">Tindakan</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tb-pengawas" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- MODUL 03: OPERASI & LAPORAN -->
+            <section id="mod-03" class="hidden space-y-5">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-2 flex items-center gap-1.5 overflow-x-auto">
+                    <button type="button" id="s03-harian" onclick="bukaSub03('harian')" class="px-4 py-2 rounded-xl text-xs font-bold bg-[#047857] text-white whitespace-nowrap cursor-pointer">3.1 Laporan Harian Warden</button>
+                    <button type="button" id="s03-rollcall" onclick="bukaSub03('rollcall')" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 whitespace-nowrap transition cursor-pointer">3.2 Taklimat &amp; Roll Call</button>
+                    <button type="button" id="s03-kesihatan" onclick="bukaSub03('kesihatan')" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 whitespace-nowrap transition cursor-pointer">3.3 Kesihatan &amp; Kebajikan</button>
+                    <button type="button" id="s03-prep" onclick="bukaSub03('prep')" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 whitespace-nowrap transition cursor-pointer">3.4 Laporan Prep Malam</button>
+                </div>
+
+                <!-- 3.1 LAPORAN HARIAN WARDEN -->
+                <div id="p03-harian" class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                    <div class="lg:col-span-8 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+                        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                            <div>
+                                <h3 class="text-base font-extrabold text-slate-900">Borang Laporan Pemantauan Harian Warden</h3>
+                                <p class="text-xs text-slate-500">Lengkapkan kehadiran, semakan 6 aspek operasi dan tindakan susulan.</p>
+                            </div>
+                            <span id="m3-h-balance" class="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-extrabold">Seimbang (0 / 0)</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label for="m3-h-date" class="block text-xs font-bold text-slate-700 mb-1">Tarikh</label>
+                                <input type="text" id="m3-h-date" value="24/11/2026" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+                            </div>
+                            <div>
+                                <label for="m3-h-day" class="block text-xs font-bold text-slate-700 mb-1">Hari</label>
+                                <input type="text" id="m3-h-day" value="Selasa" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+                            </div>
+                            <div>
+                                <label for="m3-h-warden" class="block text-xs font-bold text-slate-700 mb-1">Warden Bertugas</label>
+                                <input type="text" id="m3-h-warden" value="Cikgu Kolan" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                            <div>
+                                <label for="m3-h-tot" class="block text-[11px] font-bold text-slate-600 mb-1">Jumlah Penghuni</label>
+                                <input type="number" id="m3-h-tot" value="248" oninput="kiraImbanganHarian()" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-bold">
+                            </div>
+                            <div>
+                                <label for="m3-h-pres" class="block text-[11px] font-bold text-emerald-700 mb-1">Hadir</label>
+                                <input type="number" id="m3-h-pres" value="242" oninput="kiraImbanganHarian()" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-bold">
+                            </div>
+                            <div>
+                                <label for="m3-h-perm" class="block text-[11px] font-bold text-sky-700 mb-1">Kebenaran</label>
+                                <input type="number" id="m3-h-perm" value="3" oninput="kiraImbanganHarian()" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-bold">
+                            </div>
+                            <div>
+                                <label for="m3-h-sick" class="block text-[11px] font-bold text-amber-700 mb-1">Sakit</label>
+                                <input type="number" id="m3-h-sick" value="2" oninput="kiraImbanganHarian()" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-bold">
+                            </div>
+                            <div>
+                                <label for="m3-h-abs" class="block text-[11px] font-bold text-rose-700 mb-1">Tidak Hadir</label>
+                                <input type="number" id="m3-h-abs" value="1" oninput="kiraImbanganHarian()" class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-bold">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                            <div>
+                                <label for="m3-asp-1" class="block text-[11px] font-bold text-slate-700 mb-1">1. Makanan &amp; Dewan Makan</label>
+                                <select id="m3-asp-1" class="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs bg-white">
+                                    <option>Baik / Memuaskan</option>
+                                    <option>Perlu Perhatian</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="m3-asp-2" class="block text-[11px] font-bold text-slate-700 mb-1">2. Kebersihan &amp; Keceriaan</label>
+                                <select id="m3-asp-2" class="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs bg-white">
+                                    <option>Baik / Memuaskan</option>
+                                    <option>Perlu Perhatian</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="m3-asp-3" class="block text-[11px] font-bold text-slate-700 mb-1">3. Keselamatan Asrama</label>
+                                <select id="m3-asp-3" class="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs bg-white">
+                                    <option>Baik / Memuaskan</option>
+                                    <option>Perlu Perhatian</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="m3-asp-4" class="block text-[11px] font-bold text-slate-700 mb-1">4. Kesihatan &amp; Kebajikan</label>
+                                <select id="m3-asp-4" class="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs bg-white">
+                                    <option>Baik / Memuaskan</option>
+                                    <option>Perlu Perhatian</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="m3-asp-5" class="block text-[11px] font-bold text-slate-700 mb-1">5. Utiliti &amp; Kerosakan</label>
+                                <select id="m3-asp-5" class="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs bg-white">
+                                    <option>Baik / Memuaskan</option>
+                                    <option>Perlu Perhatian</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="m3-asp-6" class="block text-[11px] font-bold text-slate-700 mb-1">6. Disiplin &amp; Sahsiah</label>
+                                <select id="m3-asp-6" class="w-full px-3 py-1.5 rounded-xl border border-slate-300 text-xs bg-white">
+                                    <option>Baik / Memuaskan</option>
+                                    <option>Perlu Perhatian</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label for="m3-h-inclvl" class="block text-xs font-bold text-slate-700 mb-1">Tahap Insiden</label>
+                                <select id="m3-h-inclvl" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white">
+                                    <option>Tiada Insiden</option>
+                                    <option>Insiden Kecil / Terkawal</option>
+                                    <option>Insiden Perlu Tindakan Lanjut</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="m3-h-incnum" class="block text-xs font-bold text-slate-700 mb-1">Bilangan Insiden</label>
+                                <input type="number" id="m3-h-incnum" value="0" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="m3-h-sum" class="block text-xs font-bold text-slate-700 mb-1">Ringkasan Keadaan / Isu</label>
+                            <textarea id="m3-h-sum" rows="2" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">Keadaan asrama terkawal, murid mematuhi rutin latihan, makan dan waktu prep malam (7.30 - 9.00 mlm).</textarea>
+                        </div>
+
+                        <div>
+                            <label for="m3-h-act" class="block text-xs font-bold text-slate-700 mb-1">Tindakan Diambil</label>
+                            <textarea id="m3-h-act" rows="2" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">Rondaan blok, semakan kehadiran dan pemantauan lampu padam dilaksanakan mengikut jadual.</textarea>
+                        </div>
+
+                        <label class="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+                            <input type="checkbox" id="m3-h-conf" checked class="rounded border-slate-300">
+                            <span>Saya mengesahkan bahawa butiran laporan harian ini adalah tepat dan benar.</span>
+                        </label>
+
+                        <button type="button" onclick="simpanLaporanHarian()" class="w-full bg-[#047857] hover:bg-[#065f46] text-white font-extrabold text-xs py-3 rounded-xl transition cursor-pointer">
+                            Simpan Laporan Harian Warden
+                        </button>
+                    </div>
+
+                    <div class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-sm font-extrabold text-slate-900">Rekod Laporan Harian</h4>
+                            <span id="m3-h-cnt" class="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-800 text-xs font-extrabold">0</span>
+                        </div>
+                        <div id="m3-h-list" class="space-y-3 max-h-[680px] overflow-y-auto pr-1"></div>
+                    </div>
+                </div>
+
+                <!-- 3.2 TAKLIMAT & ROLL CALL -->
+                <div id="p03-rollcall" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                    <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-3.5">
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900">3.2 Rekod Taklimat &amp; Roll Call Asrama</h3>
+                            <p class="text-xs text-slate-500">Catat kehadiran roll call pagi, petang atau malam serta amanat warden.</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label for="m3-rc-date" class="block text-xs font-bold text-slate-700 mb-1">Tarikh</label>
+                                <input type="text" id="m3-rc-date" value="24/11/2026" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+                            </div>
+                            <div>
+                                <label for="m3-rc-ses" class="block text-xs font-bold text-slate-700 mb-1">Sesi Roll Call</label>
+                                <input type="text" id="m3-rc-ses" value="Roll Call Malam (9.15 mlm)" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label for="m3-rc-zon" class="block text-xs font-bold text-slate-700 mb-1">Zon / Blok</label>
+                                <input type="text" id="m3-rc-zon" value="Semua Zon (Aspura &amp; Aspuri)" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+                            </div>
+                            <div>
+                                <label for="m3-rc-warden" class="block text-xs font-bold text-slate-700 mb-1">Warden Pengendali</label>
+                                <input type="text" id="m3-rc-warden" value="Cikgu Kolan" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label for="m3-rc-pres" class="block text-xs font-bold text-emerald-700 mb-1">Hadir</label>
+                                <input type="number" id="m3-rc-pres" value="243" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold">
+                            </div>
+                            <div>
+                                <label for="m3-rc-abs" class="block text-xs font-bold text-rose-700 mb-1">Tidak Hadir / Lewat</label>
+                                <input type="number" id="m3-rc-abs" value="5" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold">
+                            </div>
+                        </div>
+                        <div>
+                            <label for="m3-rc-note" class="block text-xs font-bold text-slate-700 mb-1">Intipati Taklimat / Arahan</label>
+                            <textarea id="m3-rc-note" rows="2" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">Peringatan kebersihan bilik, penjagaan peralatan sukan dan pematuhan lampu padam 10.30 mlm.</textarea>
+                        </div>
+                        <div>
+                            <label for="m3-rc-absentlist" class="block text-xs font-bold text-slate-700 mb-1">Senarai Tidak Hadir &amp; Sebab</label>
+                            <textarea id="m3-rc-absentlist" rows="2" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">5 atlet menjalani pemulihan fisioterapi / kebenaran rasmi.</textarea>
+                        </div>
+                        <button type="button" onclick="simpanRollCall()" class="w-full bg-[#0b1730] hover:bg-slate-800 text-white font-bold text-xs py-3 rounded-xl transition cursor-pointer">
+                            Simpan Rekod Roll Call
+                        </button>
+                    </div>
+
+                    <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+                        <h4 class="text-base font-extrabold text-slate-900">Senarai Rekod Roll Call</h4>
+                        <div id="m3-rc-list" class="space-y-3"></div>
+                    </div>
+                </div>
+
+                <!-- 3.3 KESIHATAN & KEBAJIKAN -->
+                <div id="p03-kesihatan" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                    <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-3.5">
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900">3.3 Daftar Kes Kesihatan &amp; Kebajikan Murid</h3>
+                            <p class="text-xs text-slate-500">Rekod kecederaan sukan, demam/sakit atau kebajikan penghuni asrama.</p>
+                        </div>
+                        <div>
+                            <label for="m3-wl-name" class="block text-xs font-bold text-slate-700 mb-1">Nama Penuh Murid *</label>
+                            <input type="text" id="m3-wl-name" placeholder="Nama penuh atlet / murid" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label for="m3-wl-date" class="block text-xs font-bold text-slate-700 mb-1">Tarikh</label>
+                                <input type="text" id="m3-wl-date" value="24/11/2026" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+                            </div>
+                            <div>
+                                <label for="m3-wl-cat" class="block text-xs font-bold text-slate-700 mb-1">Kategori Kes</label>
+                                <select id="m3-wl-cat" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white">
+                                    <option>Kecederaan Sukan</option>
+                                    <option>Kesihatan / Sakit</option>
+                                    <option>Kebajikan Murid</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label for="m3-wl-rs" class="block text-xs font-bold text-slate-700 mb-1">Bilik &amp; Sukan</label>
+                                <input type="text" id="m3-wl-rs" placeholder="Olimpik 1 &bull; Olahraga" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+                            </div>
+                            <div>
+                                <label for="m3-wl-st" class="block text-xs font-bold text-slate-700 mb-1">Status Semasa</label>
+                                <select id="m3-wl-st" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white">
+                                    <option>Dalam Rawatan / Pantauan</option>
+                                    <option>Selesai / Pulih</option>
+                                    <option>Rujukan Klinik / Hospital</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="m3-wl-desc" class="block text-xs font-bold text-slate-700 mb-1">Keterangan &amp; Tindakan *</label>
+                            <textarea id="m3-wl-desc" rows="3" placeholder="Nyatakan gejala/kecederaan dan tindakan rawatan atau rujukan..." class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"></textarea>
+                        </div>
+                        <button type="button" onclick="simpanKesKesihatan()" class="w-full bg-[#047857] hover:bg-[#065f46] text-white font-bold text-xs py-3 rounded-xl transition cursor-pointer">
+                            Simpan Rekod Kesihatan / Kebajikan
+                        </button>
+                    </div>
+
+                    <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <h4 class="text-base font-extrabold text-slate-900">Senarai Rekod Kesihatan &amp; Kebajikan</h4>
+                            <select id="m3-wl-filter" onchange="paparModul03()" class="px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-bold bg-white">
+                                <option value="Semua">Semua Status</option>
+                                <option value="Dalam Rawatan / Pantauan">Dalam Rawatan / Pantauan</option>
+                                <option value="Selesai / Pulih">Selesai / Pulih</option>
+                                <option value="Rujukan Klinik / Hospital">Rujukan Klinik / Hospital</option>
+                            </select>
+                        </div>
+                        <div id="m3-wl-list" class="space-y-3"></div>
+                    </div>
+                </div>
+
+                <!-- 3.4 LAPORAN PREP MALAM -->
+                <div id="p03-prep" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                    <div class="lg:col-span-8 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                                <h3 class="text-base font-extrabold text-slate-900">3.4 Laporan Prep Malam (7.30 - 9.00 mlm)</h3>
+                                <p class="text-xs text-slate-500">Rekod kehadiran prep mengikut kelas Tingkatan 1 hingga 5.</p>
+                            </div>
+                            <span id="m3-p-totals" class="px-3 py-1 rounded-full bg-indigo-50 text-indigo-800 text-xs font-extrabold">Hadir: 0 &bull; Tidak Hadir: 0</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label for="m3-p-date" class="block text-xs font-bold text-slate-700 mb-1">Tarikh</label>
+                                <input type="text" id="m3-p-date" value="24/11/2026" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+                            </div>
+                            <div>
+                                <label for="m3-p-warden" class="block text-xs font-bold text-slate-700 mb-1">Pemantau Prep</label>
+                                <input type="text" id="m3-p-warden" value="Cikgu Kolan" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+                            </div>
+                            <div>
+                                <label for="m3-p-st" class="block text-xs font-bold text-slate-700 mb-1">Status Umum</label>
+                                <select id="m3-p-st" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white">
+                                    <option>Terkawal &amp; Kondusif</option>
+                                    <option>Perlu Teguran Disiplin</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="m3-p-sum" class="block text-xs font-bold text-slate-700 mb-1">Rumusan Prep Malam</label>
+                            <input type="text" id="m3-p-sum" value="Murid belajar dengan teratur di bilik/dewan prep sepanjang sesi 7.30 - 9.00 mlm." class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+                        </div>
+
+                        <div class="overflow-x-auto border border-slate-200 rounded-2xl">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr class="bg-slate-50 border-b border-slate-200 text-slate-600">
+                                        <th class="py-2.5 px-4">Tingkatan</th>
+                                        <th class="py-2.5 px-3">Kelas</th>
+                                        <th class="py-2.5 px-3">Hadir</th>
+                                        <th class="py-2.5 px-3">Tidak Hadir</th>
+                                        <th class="py-2.5 px-4">Catatan / Sebab</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="m3-p-classes" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+
+                        <button type="button" onclick="simpanLaporanPrep()" class="w-full bg-[#0b1730] hover:bg-slate-800 text-white font-bold text-xs py-3 rounded-xl transition cursor-pointer">
+                            Simpan Laporan Prep Malam
+                        </button>
+                    </div>
+
+                    <div class="lg:col-span-4 bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h4 class="text-sm font-extrabold text-slate-900">Rekod Prep Malam</h4>
+                            <span id="m3-p-cnt" class="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-800 text-xs font-extrabold">0</span>
+                        </div>
+                        <div id="m3-p-list" class="space-y-3 max-h-[680px] overflow-y-auto pr-1"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- MODUL 04: KECEMASAN & ADUAN -->
+            <section id="mod-04" class="hidden space-y-5">
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-2 flex items-center gap-1.5 overflow-x-auto">
+                    <button type="button" onclick="bukaSub04('direktori')" id="s04-direktori"
+                            class="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 text-white whitespace-nowrap cursor-pointer">
+                        1. Direktori Kecemasan
+                    </button>
+                    <button type="button" onclick="bukaSub04('kes')" id="s04-kes"
+                            class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 whitespace-nowrap transition cursor-pointer">
+                        2. Rekod Kes Kecemasan / Disiplin
+                    </button>
+                    <button type="button" onclick="bukaSub04('kerosakan')" id="s04-kerosakan"
+                            class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 whitespace-nowrap transition cursor-pointer">
+                        3. Aduan Kerosakan Asrama
+                    </button>
+                </div>
+
+                <!-- 1. DIREKTORI KECEMASAN -->
+                <div id="p04-direktori" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900">1. Direktori Talian Kecemasan &amp; Pihak Berwajib</h3>
+                            <p class="text-xs text-slate-500">Talian penting pentadbiran sekolah, warden asrama, perubatan &amp; kecemasan Kuching.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="bukaBorang('direktori', -1)" class="bg-[#0b1730] hover:bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-xl cursor-pointer">+ Tambah Talian</button>
+                            <button type="button" onclick="cetakTerasing('m04-direktori')" class="bg-amber-400 hover:bg-amber-500 text-slate-950 text-xs font-extrabold px-4 py-2 rounded-xl cursor-pointer">&#128424; Cetak Direktori</button>
+                        </div>
+                    </div>
+
+                    <div id="m4-dir-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                </div>
+
+                <!-- 2. REKOD KES KECEMASAN / DISIPLIN -->
+                <div id="p04-kes" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                    <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-3.5">
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900">2. Daftar Kes Kecemasan / Disiplin</h3>
+                            <p class="text-xs text-slate-500">Rekod insiden kecemasan, pelanggaran peraturan asrama &amp; tindakan disiplin.</p>
+                        </div>
+                        <div>
+                            <label for="m4-k-name" class="block text-xs font-bold text-slate-700 mb-1">Nama Murid Terlibat *</label>
+                            <input type="text" id="m4-k-name" placeholder="Nama penuh murid" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label for="m4-k-meta" class="block text-xs font-bold text-slate-700 mb-1">Bilik &amp; Kelas *</label>
+                                <input type="text" id="m4-k-meta" placeholder="Olimpik 4 &bull; 4K2" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+                            </div>
+                            <div>
+                                <label for="m4-k-date" class="block text-xs font-bold text-slate-700 mb-1">Tarikh &amp; Masa *</label>
+                                <input type="text" id="m4-k-date" value="24/11/2026 • 10.15 mlm" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label for="m4-k-cat" class="block text-xs font-bold text-slate-700 mb-1">Jenis Kes</label>
+                                <select id="m4-k-cat" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white">
+                                    <option>Kecemasan Asrama</option>
+                                    <option>Disiplin / Peraturan</option>
+                                    <option>Keluar Tanpa Kebenaran</option>
+                                    <option>Keselamatan / Gangguan</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="m4-k-st" class="block text-xs font-bold text-slate-700 mb-1">Status Tindakan</label>
+                                <select id="m4-k-st" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white">
+                                    <option selected>Dalam Siasatan / Tindakan</option>
+                                    <option>Rujukan PK HEM / Lembaga Disiplin</option>
+                                    <option>Selesai / Kaunseling</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="m4-k-desc" class="block text-xs font-bold text-slate-700 mb-1">Ringkasan Kes &amp; Tindakan Warden *</label>
+                            <textarea id="m4-k-desc" rows="3" placeholder="Nyatakan butiran kejadian, saksi dan tindakan segera yang diambil..." class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"></textarea>
+                        </div>
+                        <button type="button" onclick="simpanKesKecemasan()" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs py-3 rounded-xl transition cursor-pointer">
+                            &#9888; Simpan Rekod Kes Kecemasan / Disiplin
+                        </button>
+                    </div>
+
+                    <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                                <h4 class="text-base font-extrabold text-slate-900">Senarai Rekod Kes Kecemasan / Disiplin</h4>
+                                <p class="text-xs text-slate-500">Klik <strong>Cetak Kes Ini</strong> untuk mencetak satu kes sahaja.</p>
+                            </div>
+                            <select id="m4-k-filter" onchange="paparModul04()" class="px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-bold bg-white">
+                                <option value="Semua">Semua Status</option>
+                                <option value="Dalam Siasatan / Tindakan">Dalam Siasatan / Tindakan</option>
+                                <option value="Rujukan PK HEM / Lembaga Disiplin">Rujukan PK HEM / Lembaga Disiplin</option>
+                                <option value="Selesai / Kaunseling">Selesai / Kaunseling</option>
+                            </select>
+                        </div>
+                        <div id="m4-k-list" class="space-y-3"></div>
+                    </div>
+                </div>
+
+                <!-- 3. ADUAN KEROSAKAN ASRAMA -->
+                <div id="p04-kerosakan" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                    <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-3.5">
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900">3. Borang Aduan Kerosakan Asrama</h3>
+                            <p class="text-xs text-slate-500">Laporkan kerosakan paip, elektrik, perabot, katil, tingkap &amp; fasiliti blok.</p>
+                        </div>
+                        <div>
+                            <label for="m4-r-loc" class="block text-xs font-bold text-slate-700 mb-1">Lokasi / Blok / Bilik *</label>
+                            <input type="text" id="m4-r-loc" placeholder="Contoh: Tandas Bilik Olimpik 3" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label for="m4-r-cat" class="block text-xs font-bold text-slate-700 mb-1">Kategori Kerosakan</label>
+                                <select id="m4-r-cat" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white">
+                                    <option>Paip &amp; Sanitasi</option>
+                                    <option>Elektrik &amp; Lampu</option>
+                                    <option>Perabot &amp; Katil</option>
+                                    <option>Pintu, Tingkap &amp; Struktur</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="m4-r-st" class="block text-xs font-bold text-slate-700 mb-1">Status Semasa</label>
+                                <select id="m4-r-st" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white">
+                                    <option selected>Dalam Tindakan</option>
+                                    <option>Baru Dilaporkan</option>
+                                    <option>Selesai Dibaiki</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="m4-r-rep" class="block text-xs font-bold text-slate-700 mb-1">Pelapor &amp; Tarikh *</label>
+                            <input type="text" id="m4-r-rep" value="Cikgu Kolan • 24/11/2026" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+                        </div>
+                        <div>
+                            <label for="m4-r-desc" class="block text-xs font-bold text-slate-700 mb-1">Keterangan Kerosakan *</label>
+                            <textarea id="m4-r-desc" rows="3" placeholder="Nyatakan kerosakan secara jelas untuk tindakan penyelia / juruteknik..." class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"></textarea>
+                        </div>
+                        <button type="button" onclick="simpanAduanKerosakan()" class="w-full bg-[#0b1730] hover:bg-slate-800 text-white font-bold text-xs py-3 rounded-xl transition cursor-pointer">
+                            &#128295; Hantar Aduan Kerosakan
+                        </button>
+                    </div>
+
+                    <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                                <h4 class="text-base font-extrabold text-slate-900">Senarai Aduan Kerosakan Asrama</h4>
+                                <p class="text-xs text-slate-500">Klik <strong>Cetak Aduan Ini</strong> untuk mencetak satu aduan kerosakan sahaja.</p>
+                            </div>
+                            <select id="m4-r-filter" onchange="paparModul04()" class="px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-bold bg-white">
+                                <option value="Semua">Semua Status</option>
+                                <option value="Baru Dilaporkan">Baru Dilaporkan</option>
+                                <option value="Dalam Tindakan">Dalam Tindakan</option>
+                                <option value="Selesai Dibaiki">Selesai Dibaiki</option>
+                            </select>
+                        </div>
+                        <div id="m4-r-list" class="space-y-3"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- FOOTER -->
+        <footer class="bg-[#0b1730] text-slate-300 text-xs px-3 sm:px-6 lg:px-8 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div>&copy; 2026 Unit Pengurusan Asrama &bull; SMK Tabuan Jaya (Sekolah Sukan Negeri Sarawak)</div>
+            <div class="italic text-amber-300">"SSN Sarawak, Yes We Can! Bersatu Hati. Melangkah Pasti. Menjulang Prestasi"</div>
+        </footer>
+    </div>
+
+    <!-- MODAL BORANG -->
+    <div id="form-modal" class="fixed inset-0 bg-slate-950/60 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200">
+            <div class="bg-[#0b1730] text-white px-5 py-3.5 flex items-center justify-between">
+                <h3 id="modal-title" class="text-sm font-extrabold">Kemaskini Rekod</h3>
+                <button type="button" onclick="tutupBorang()" class="text-slate-300 hover:text-white text-xl font-bold leading-none cursor-pointer">&times;</button>
+            </div>
+            <form id="crud-form" onsubmit="simpanBorang(event)" class="p-5 space-y-3 max-h-[80vh] overflow-y-auto">
+                <input type="hidden" id="m-type" value="">
+                <input type="hidden" id="m-idx" value="-1">
+                <div id="m-fields" class="space-y-3"></div>
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="tutupBorang()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold cursor-pointer">Batal</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-[#0b1730] hover:bg-slate-800 text-white text-xs font-bold cursor-pointer">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL PENGURUSAN ID & KATA LALUAN PENGGUNA -->
+    <div id="account-modal" class="fixed inset-0 bg-slate-950/60 z-50 hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden border border-slate-200">
+            <div class="bg-[#0b1730] text-white px-5 py-3.5 flex items-center justify-between">
+                <h3 class="text-sm font-extrabold">Kemaskini ID &amp; Kata Laluan Staf Asrama</h3>
+                <button type="button" onclick="tutupModalAkaun()" class="text-slate-300 hover:text-white text-xl font-bold leading-none cursor-pointer">&times;</button>
+            </div>
+            <form onsubmit="simpanTetapanAkaun(event)" class="p-5 space-y-3 max-h-[80vh] overflow-y-auto text-xs">
+                <p class="text-slate-500">Asingkan beberapa ID alternatif menggunakan tanda garis miring (<code class="font-bold">/</code>).</p>
+                <div id="account-fields" class="space-y-3"></div>
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="tutupModalAkaun()" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold cursor-pointer">Batal</button>
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-[#047857] hover:bg-[#065f46] text-white font-bold cursor-pointer">Simpan Akaun</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const ROOMS_24 = [
+            'Olimpik 1', 'Olimpik 2', 'Olimpik 3', 'Olimpik 4', 'Olimpik 5', 'Olimpik 6',
+            'Komanwel 1', 'Komanwel 2', 'Komanwel 3', 'Komanwel 4', 'Komanwel 5', 'Komanwel 6',
+            'Blok A1', 'Blok A2', 'Blok A3', 'Blok A4', 'Blok A5', 'Blok A6', 'Blok A7', 'Blok A8',
+            'Blok B1', 'Blok B2', 'Blok B3', 'Blok B4'
+        ];
+        const HARI = ['Isnin', 'Selasa', 'Rabu', 'Khamis', 'Jumaat', 'Sabtu', 'Ahad'];
+        const BULAN_SENARAI = [
+            'Januari 2026', 'Februari 2026', 'Mac 2026', 'April 2026', 'Mei 2026', 'Jun 2026',
+            'Julai 2026', 'Ogos 2026', 'September 2026', 'Oktober 2026', 'November 2026', 'Disember 2026'
+        ];
+        const KELAS_LALAI = [
+            { form: 'Tingkatan 1', cls: '1S1', present: 10, absent: 1, note: '' },
+            { form: 'Tingkatan 1', cls: '1S2', present: 10, absent: 1, note: '' },
+            { form: 'Tingkatan 1', cls: '1S3', present: 9, absent: 1, note: '' },
+            { form: 'Tingkatan 1', cls: '1S4', present: 9, absent: 1, note: '' },
+            { form: 'Tingkatan 2', cls: '2S2', present: 11, absent: 1, note: '' },
+            { form: 'Tingkatan 2', cls: '2S3', present: 10, absent: 1, note: '' },
+            { form: 'Tingkatan 2', cls: '2S4', present: 10, absent: 1, note: '' },
+            { form: 'Tingkatan 3', cls: '3A1', present: 12, absent: 1, note: '' },
+            { form: 'Tingkatan 3', cls: '3A2', present: 11, absent: 1, note: '' },
+            { form: 'Tingkatan 3', cls: '3A3', present: 11, absent: 1, note: '' },
+            { form: 'Tingkatan 3', cls: '3A4', present: 10, absent: 1, note: '' },
+            { form: 'Tingkatan 4', cls: '4K1', present: 12, absent: 1, note: '' },
+            { form: 'Tingkatan 4', cls: '4K2', present: 11, absent: 1, note: '' },
+            { form: 'Tingkatan 4', cls: '4K3', present: 11, absent: 1, note: '' },
+            { form: 'Tingkatan 4', cls: '4K4', present: 10, absent: 1, note: '' },
+            { form: 'Tingkatan 5', cls: '5O1', present: 12, absent: 1, note: '' },
+            { form: 'Tingkatan 5', cls: '5O2', present: 11, absent: 1, note: '' },
+            { form: 'Tingkatan 5', cls: '5O3', present: 11, absent: 1, note: '' },
+            { form: 'Tingkatan 5', cls: '5O4', present: 10, absent: 1, note: '' }
+        ];
+
+        const AKAUN_LALAI = [
+            { id: 'kw01', role: 'Ketua Warden', name: 'Cikgu Kolan', ids: ['cikgu kolan', 'kolan', 'kw01'], password: 'KW01' },
+            { id: 'wa01', role: 'Warden', name: 'Cikgu Alexander', ids: ['cikgu alexander', 'alexander', 'wa01'], password: 'WA01' },
+            { id: 'wa02', role: 'Warden', name: 'Cikgu Aldrin', ids: ['cikgu aldrin', 'adlrin', 'wa02'], password: 'WA02' },
+            { id: 'wa03', role: 'Warden', name: 'Cikgu Amy', ids: ['cikgu amy', 'amy', 'wa03'], password: 'WA03' },
+            { id: 'wa04', role: 'Warden', name: 'Cikgu Mohd Tirmidzi', ids: ['cikgu mohd tirmidzi', 'mohd tirmidzi', 'tirmidzi', 'wa04'], password: 'WA04' },
+            { id: 'wa05', role: 'Warden', name: 'Cikgu Aqilah', ids: ['cikgu aqilah', 'aqilah', 'wa05'], password: 'WA05' },
+            { id: 'wa06', role: 'Warden', name: 'Puan Norrizan', ids: ['puan norrizan', 'norrizan', 'wa06'], password: 'WA06' },
+            { id: 'pa01', role: 'Penyelia Asrama', name: 'Puan Max', ids: ['puan max', 'max', 'pa01'], password: 'PA01' },
+            { id: 'pw01', role: 'Pembantu Warden', name: 'Encik Rahman', ids: ['encik rahman', 'rahman', 'pw01'], password: 'PW01' }
+        ];
+
+        const KEBENARAN_PERANAN = {
+            'Ketua Warden': { modules: ['00', '01', '02', '03', '04'], canEdit: true, canReset: true, canManageAccounts: true },
+            'Warden': { modules: ['00', '01', '02', '03', '04'], canEdit: true, canReset: false, canManageAccounts: false },
+            'Penyelia Asrama': { modules: ['00', '01', '02', '04'], canEdit: true, canReset: false, canManageAccounts: false },
+            'Pembantu Warden': { modules: ['00', '02', '03', '04'], canEdit: true, canReset: false, canManageAccounts: false }
+        };
+
+        function menuLalai() {
+            const w1 = HARI.map((hari, i) => ({
+                hari,
+                bf: i % 2 === 0 ? 'Nasi Lemak Ayam + Telur + Milo' : 'Mihun Goreng + Telur + Susu',
+                sn1: 'Roti Bijirin + Buah + Air Isotonik',
+                lu: 'Nasi Putih + Ayam/Ikan + Sayur + Buah',
+                sn2: 'Nasi Putih + Daging/Ayam + Sup + Buah',
+                dn: 'Biskut Kraker + Minuman Suam'
+            }));
+            return { 1: w1, 2: JSON.parse(JSON.stringify(w1)), 3: JSON.parse(JSON.stringify(w1)), 4: JSON.parse(JSON.stringify(w1)) };
+        }
+
+        const STORAGE_KEY = 'smktj_step9_staff_ids_v1';
+        const SESSION_KEY = 'smktj_active_session_step9_v1';
+        const dataLalai = {
+            accounts: JSON.parse(JSON.stringify(AKAUN_LALAI)),
+            staf: [
+                { name: 'Cikgu Kolan', role: 'Ketua Warden', zone: 'Semua Blok (Aspura & Aspuri)', phone: '013-8114520' },
+                { name: 'Cikgu Alexander', role: 'Warden Asrama', zone: 'Olimpik 1–6', phone: '019-8842210' },
+                { name: 'Cikgu Aldrin', role: 'Warden Asrama', zone: 'Komanwel 1–6', phone: '014-8921105' },
+                { name: 'Cikgu Amy', role: 'Warden Asrama', zone: 'Blok A1–A8', phone: '013-8257790' },
+                { name: 'Cikgu Mohd Tirmidzi', role: 'Warden Asrama', zone: 'Aspura', phone: '012-8801122' },
+                { name: 'Cikgu Aqilah', role: 'Warden Asrama', zone: 'Aspuri', phone: '017-8453311' },
+                { name: 'Puan Norrizan', role: 'Warden Asrama', zone: 'Aspuri', phone: '016-8904455' },
+                { name: 'Puan Max', role: 'Penyelia Asrama', zone: 'Pentadbiran & Fasiliti', phone: '011-26789900' },
+                { name: 'Encik Rahman', role: 'Pembantu Warden', zone: 'Operasi Harian & Keselamatan', phone: '019-8215566' }
+            ],
+            jadual: [
+                { month: 'November 2026', period: '17 - 23 Nov 2026', duty: 'Cikgu Hafiz bin Ramli', standby: 'Ustazah Siti Aminah', note: 'Bertugas harian' },
+                { month: 'Oktober 2026', period: '12 - 18 Okt 2026', duty: 'Cikgu Alexander', standby: 'Cikgu Aldrin', note: 'Selesai dijalankan' }
+            ],
+            lawatan: [
+                { month: 'November 2026', date: '15/11/2026', time: '11.15 mlm', zone: 'Olimpik 1–6', wardens: 'Cikgu Kolan & Cikgu Alexander', status: 'Terkawal' },
+                { month: 'Oktober 2026', date: '20/10/2026', time: '11.00 mlm', zone: 'Blok A1–A8', wardens: 'Cikgu Amy & Cikgu Kolan', status: 'Memuaskan' }
+            ],
+            menus: menuLalai(),
+            aspura: [
+                { room: 'Olimpik 1', cap: 10, occ: 9 }, { room: 'Olimpik 2', cap: 10, occ: 9 }, { room: 'Olimpik 3', cap: 10, occ: 9 },
+                { room: 'Olimpik 4', cap: 10, occ: 9 }, { room: 'Olimpik 5', cap: 10, occ: 9 }, { room: 'Olimpik 6', cap: 10, occ: 9 },
+                { room: 'Komanwel 1', cap: 10, occ: 9 }, { room: 'Komanwel 2', cap: 10, occ: 9 }, { room: 'Komanwel 3', cap: 10, occ: 9 },
+                { room: 'Komanwel 4', cap: 10, occ: 9 }, { room: 'Komanwel 5', cap: 10, occ: 8 }, { room: 'Komanwel 6', cap: 10, occ: 8 }
+            ],
+            aspuri: [
+                { room: 'Blok A1', cap: 12, occ: 11 }, { room: 'Blok A2', cap: 12, occ: 11 }, { room: 'Blok A3', cap: 12, occ: 10 },
+                { room: 'Blok A4', cap: 12, occ: 11 }, { room: 'Blok A5', cap: 12, occ: 10 }, { room: 'Blok A6', cap: 12, occ: 10 },
+                { room: 'Blok A7', cap: 12, occ: 11 }, { room: 'Blok A8', cap: 12, occ: 10 }, { room: 'Blok B1', cap: 16, occ: 15 },
+                { room: 'Blok B2', cap: 16, occ: 15 }, { room: 'Blok B3', cap: 16, occ: 14 }, { room: 'Blok B4', cap: 16, occ: 14 }
+            ],
+            kepimpinan: {
+                'Olimpik 2': { pic: 'Cikgu Aldrin', pref: 'Pengawas Bilik Olimpik 2', lead: 'Ketua Bilik Olimpik 2', asst: 'Penolong Bilik Olimpik 2' }
+            },
+            penghuni: [
+                { room: 'Olimpik 2', bed: '02-01', name: 'Aiman Hakim bin Zulkifli', cls: '3A1', sport: 'Bola Sepak' }
+            ],
+            pengawas: [
+                { post: 'Ketua Pengawas Asrama (Aspura)', name: 'Muhammad Danish Hakim bin Azlan', cls: '5O1', room: 'Olimpik 1', sport: 'Olahraga', task: 'Mengetuai Majlis Pengawas Asrama Aspura, menyelaras roll call & disiplin blok lelaki.' },
+                { post: 'Ketua Pengawas Asrama (Aspuri)', name: 'Nurul Izzah Syahirah binti Mazlan', cls: '5O1', room: 'Blok A1', sport: 'Olahraga', task: 'Mengetuai Majlis Pengawas Asrama Aspuri, memantau kebajikan & kekemasan blok perempuan.' }
+            ],
+            harianRekod: [
+                {
+                    date: '16/11/2026', day: 'Isnin', warden: 'Cikgu Hafiz bin Ramli', status: 'Tiada Insiden',
+                    total: 248, present: 240, absent: 1, perm: 2, sick: 2,
+                    aspects: {
+                        makanan: 'Baik / Memuaskan', kebersihan: 'Baik / Memuaskan', keselamatan: 'Baik / Memuaskan',
+                        kesihatan: 'Baik / Memuaskan', utiliti: 'Baik / Memuaskan', disiplin: 'Baik / Memuaskan'
+                    },
+                    incCount: 0,
+                    summary: 'Keadaan asrama terkawal, atlet mematuhi jadual latihan dan waktu ulang kaji (prep malam 7.30 - 9.00 mlm).',
+                    action: 'Rondaan malam dan semakan bilik dijalankan mengikut jadual.'
+                }
+            ],
+            rollCallRekod: [
+                {
+                    date: '17/11/2026', session: 'Roll Call Pagi (6.30 pg)', zone: 'Semua Zon (Aspura & Aspuri)',
+                    present: 242, absent: 6,
+                    note: 'Peringatan sarapan pagi 6.00 pg, prep malam 7.30 - 9.00 mlm dan pengurusan pakaian latihan sukan.',
+                    absentList: '6 atlet berada di pusat fisioterapi dan kejohanan luar dengan kebenaran.',
+                    warden: 'Cikgu Hafiz bin Ramli'
+                }
+            ],
+            kesKesihatan: [
+                {
+                    date: '16/11/2026', cat: 'KECEDERAAN SUKAN', name: 'Aiman Hakim bin Zulkifli',
+                    meta: 'Olimpik 2 • Bola Sepak',
+                    desc: 'Terseliuh pergelangan kaki kanan semasa latihan petang. Telah diberi tuaman ais dan rehat di bilik sakit.',
+                    status: 'Dalam Rawatan / Pantauan'
+                }
+            ],
+            prepKelas: JSON.parse(JSON.stringify(KELAS_LALAI)),
+            prepRekod: [
+                {
+                    date: '16/11/2026', warden: 'Ustazah Siti Aminah binti Yusuf', status: 'Terkawal & Kondusif',
+                    present: 219, absent: 19, timeSlot: '7.30 - 9.00 mlm',
+                    summary: 'Semua kelas berjalan lancar sepanjang waktu prep malam (7.30 - 9.00 mlm).',
+                    classes: JSON.parse(JSON.stringify(KELAS_LALAI))
+                }
+            ],
+            direktori: [
+                { title: 'Pengetua SMK Tabuan Jaya', role: 'Pentadbiran Sekolah', phone: '082-363411' },
+                { title: 'PK Hal Ehwal Murid (PK HEM)', role: 'Kebajikan & Disiplin', phone: '082-363412' },
+                { title: 'Ketua Warden Asrama (Cikgu Kolan)', role: 'Pengurusan Asrama', phone: '013-8114520' },
+                { title: 'Hospital Umum Sarawak (HUS)', role: 'Kecemasan Perubatan', phone: '082-276666' },
+                { title: 'Balai Bomba & Penyelamat Tabuan Jaya', role: 'Kebakaran & Penyelamat', phone: '999 / 082-364444' },
+                { title: 'PDRM / Balai Polis Kuching', role: 'Keselamatan & Ketenteraman', phone: '999 / 082-244444' }
+            ],
+            kesKecemasan: [
+                {
+                    date: '17/11/2026 • 10.20 mlm', cat: 'DISIPLIN / PERATURAN', name: 'Pelajar Bilik Komanwel 5',
+                    meta: 'Komanwel 5 • 4K3',
+                    desc: 'Lewat masuk ke bilik selepas lampu padam. Telah diberi amaran lisan dan nasihat oleh warden bertugas.',
+                    status: 'Selesai / Kaunseling'
+                }
+            ],
+            aduanKerosakan: [
+                { loc: 'Tandas Bilik Olimpik 3', cat: 'Paip & Sanitasi', rep: 'Cikgu Kolan • 17/11/2026', desc: 'Kepala paip sinki nombor 2 bocor dan air menitis berterusan.', status: 'Dalam Tindakan' },
+                { loc: 'Koridor Blok A2', cat: 'Elektrik & Lampu', rep: 'Cikgu Amy • 17/11/2026', desc: 'Satu lampu kalimantang di hujung koridor berkelip dan malap pada waktu malam.', status: 'Baru Dilaporkan' }
+            ]
+        };
+
+        function muatDB() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY);
+                if (!raw) return JSON.parse(JSON.stringify(dataLalai));
+                const parsed = JSON.parse(raw);
+                return {
+                    ...JSON.parse(JSON.stringify(dataLalai)),
+                    ...parsed,
+                    accounts: Array.isArray(parsed.accounts) && parsed.accounts.length ? parsed.accounts : JSON.parse(JSON.stringify(AKAUN_LALAI))
+                };
+            } catch (_) {
+                return JSON.parse(JSON.stringify(dataLalai));
+            }
+        }
+
+        let db = muatDB();
+        let sesiAktif = muatSesi();
+        let modulAktif = '00';
+        let sub01Aktif = 'staf';
+        let sub02Aktif = 'enrolmen';
+        let bilikAktif = 'Olimpik 2';
+        let mingguAktif = 1;
+        let penapisPengawas = 'semua';
+        let sub03Aktif = 'harian';
+        let sub04Aktif = 'direktori';
+
+        function muatSesi() {
+            try {
+                const raw = sessionStorage.getItem(SESSION_KEY) || localStorage.getItem(SESSION_KEY);
+                return raw ? JSON.parse(raw) : null;
+            } catch (_) {
+                return null;
+            }
+        }
+
+        function simpanSesi(sesi) {
+            sesiAktif = sesi;
+            try {
+                if (sesi) {
+                    sessionStorage.setItem(SESSION_KEY, JSON.stringify(sesi));
+                    localStorage.setItem(SESSION_KEY, JSON.stringify(sesi));
+                } else {
+                    sessionStorage.removeItem(SESSION_KEY);
+                    localStorage.removeItem(SESSION_KEY);
+                }
+            } catch (_) {}
+        }
+
+        function togglePasswordVisibility() {
+            const inp = document.getElementById('login-password');
+            inp.type = inp.type === 'password' ? 'text' : 'password';
+        }
+
+        function prosesLogin(e) {
+            e.preventDefault();
+            const userInput = document.getElementById('login-username').value.trim().toLowerCase().replace(/\s+/g, ' ');
+            const passInput = document.getElementById('login-password').value.trim();
+            const errBox = document.getElementById('login-error');
+
+            const akaun = (db.accounts || AKAUN_LALAI).find(a => {
+                const senaraiID = Array.isArray(a.ids)
+                    ? a.ids.map(x => String(x).trim().toLowerCase().replace(/\s+/g, ' '))
+                    : String(a.username || '').split('/').map(x => x.trim().toLowerCase().replace(/\s+/g, ' '));
+                return senaraiID.includes(userInput) && String(a.password).trim() === passInput;
+            });
+
+            if (!akaun) {
+                errBox.innerText = 'ID Pengguna atau Kata Laluan tidak sah. Sila semak semula senarai ID dan kata laluan staf.';
+                errBox.classList.remove('hidden');
+                return;
+            }
+
+            errBox.classList.add('hidden');
+            const senaraiID = Array.isArray(akaun.ids) ? akaun.ids : [akaun.username || akaun.id];
+            simpanSesi({
+                id: akaun.id,
+                username: senaraiID[senaraiID.length - 1] || akaun.id,
+                name: akaun.name,
+                role: akaun.role
+            });
+            kemaskiniPaparanSesi();
+        }
+
+        function prosesLogout() {
+            simpanSesi(null);
+            document.getElementById('login-username').value = '';
+            document.getElementById('login-password').value = '';
+            document.getElementById('login-error').classList.add('hidden');
+            kemaskiniPaparanSesi();
+        }
+
+        function kemaskiniPaparanSesi() {
+            const loginScreen = document.getElementById('login-screen');
+            const appShell = document.getElementById('app-shell');
+
+            if (!sesiAktif) {
+                loginScreen.classList.remove('hidden');
+                appShell.classList.add('hidden');
+                appShell.classList.remove('flex');
+                return;
+            }
+
+            loginScreen.classList.add('hidden');
+            appShell.classList.remove('hidden');
+            appShell.classList.add('flex');
+
+            document.getElementById('active-user-name').innerText = sesiAktif.name;
+            document.getElementById('active-user-role').innerText = sesiAktif.role;
+
+            const perm = KEBENARAN_PERANAN[sesiAktif.role] || KEBENARAN_PERANAN['Warden'];
+            ['00', '01', '02', '03', '04'].forEach(kod => {
+                const navBtn = document.getElementById('nav-' + kod);
+                if (!navBtn) return;
+                if (perm.modules.includes(kod)) {
+                    navBtn.classList.remove('opacity-40', 'pointer-events-none');
+                } else {
+                    navBtn.classList.add('opacity-40', 'pointer-events-none');
+                }
+            });
+
+            const btnReset = document.getElementById('btn-reset-data');
+            if (btnReset) {
+                btnReset.classList.toggle('hidden', !perm.canReset);
+            }
+
+            const btnAcc = document.getElementById('btn-kelola-akaun');
+            if (btnAcc) {
+                btnAcc.classList.toggle('hidden', !perm.canManageAccounts);
+            }
+
+            if (!perm.modules.includes(modulAktif)) {
+                bukaModul('00');
+            }
+        }
+
+        function bukaModalAkaun() {
+            const perm = KEBENARAN_PERANAN[sesiAktif?.role] || {};
+            if (!perm.canManageAccounts) {
+                alert('Hanya Ketua Warden dibenarkan mengemas kini ID dan kata laluan akaun.');
+                return;
+            }
+            const accs = db.accounts || AKAUN_LALAI;
+            document.getElementById('account-fields').innerHTML = accs.map((a, i) => {
+                const teksID = Array.isArray(a.ids) ? a.ids.join(' / ') : (a.username || '');
+                return `
+                    <div class="rounded-xl border border-slate-200 p-3 space-y-2 bg-slate-50/50">
+                        <div class="font-extrabold text-slate-900">${a.role}</div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-600 mb-0.5">Nama Paparan</label>
+                                <input type="text" id="acc-name-${i}" value="${a.name}" required class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-600 mb-0.5">Senarai ID (pisah dengan /)</label>
+                                <input type="text" id="acc-ids-${i}" value="${teksID}" required class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-600 mb-0.5">Kata Laluan</label>
+                                <input type="text" id="acc-pass-${i}" value="${a.password}" required class="w-full px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs">
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            const m = document.getElementById('account-modal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+        }
+
+        function tutupModalAkaun() {
+            const m = document.getElementById('account-modal');
+            m.classList.add('hidden'); m.classList.remove('flex');
+        }
+
+        function simpanTetapanAkaun(e) {
+            e.preventDefault();
+            const accs = db.accounts || AKAUN_LALAI;
+            db.accounts = accs.map((a, i) => {
+                const mentahID = (document.getElementById(`acc-ids-${i}`)?.value || '').split('/').map(s => s.trim()).filter(Boolean);
+                return {
+                    ...a,
+                    name: (document.getElementById(`acc-name-${i}`)?.value || a.name).trim(),
+                    ids: mentahID.length ? mentahID : a.ids,
+                    password: (document.getElementById(`acc-pass-${i}`)?.value || a.password).trim()
+                };
+            });
+
+            const akaunSemasa = db.accounts.find(a => a.id === sesiAktif?.id || a.name === sesiAktif?.name);
+            if (akaunSemasa) {
+                simpanSesi({ id: akaunSemasa.id, username: akaunSemasa.ids[akaunSemasa.ids.length - 1], name: akaunSemasa.name, role: akaunSemasa.role });
+            }
+            simpanDB();
+            kemaskiniPaparanSesi();
+            tutupModalAkaun();
+            alert('Tetapan ID dan kata laluan staf berjaya disimpan.');
+        }
+
+        function simpanDB() {
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(db)); } catch (_) {}
+            paparSemua();
+        }
+
+        function resetData() {
+            const perm = KEBENARAN_PERANAN[sesiAktif?.role] || {};
+            if (!perm.canReset) {
+                alert('Hanya Ketua Warden dibenarkan menetapkan semula data sistem.');
+                return;
+            }
+            if (confirm('Tetapkan semula semua data sistem kepada lalai?')) {
+                const akaunSemasa = db.accounts;
+                db = JSON.parse(JSON.stringify(dataLalai));
+                if (Array.isArray(akaunSemasa) && akaunSemasa.length) {
+                    db.accounts = akaunSemasa;
+                }
+                simpanDB();
+            }
+        }
+
+        function bukaModul(kod, sub) {
+            const perm = KEBENARAN_PERANAN[sesiAktif?.role] || KEBENARAN_PERANAN['Warden'];
+            if (!perm.modules.includes(kod)) {
+                alert(`Akses modul ${kod} tidak dibuka untuk peranan ${sesiAktif?.role || 'semasa'}.`);
+                return;
+            }
+            modulAktif = kod;
+            ['00', '01', '02', '03', '04'].forEach(k => {
+                document.getElementById('mod-' + k).classList.add('hidden');
+                document.getElementById('nav-' + k).className = 'flex items-center gap-2 px-3.5 sm:px-4 py-1.5 rounded-xl text-xs font-semibold text-slate-200 hover:bg-white/10 whitespace-nowrap transition cursor-pointer';
+            });
+            document.getElementById('mod-' + kod).classList.remove('hidden');
+            document.getElementById('nav-' + kod).className = 'flex items-center gap-2 px-3.5 sm:px-4 py-1.5 rounded-xl text-xs font-extrabold bg-amber-400 text-slate-950 whitespace-nowrap cursor-pointer';
+            if (kod === '01' && sub) bukaSub01(sub);
+            if (kod === '02' && sub) bukaSub02(sub);
+            if (kod === '03' && sub) bukaSub03(sub);
+            if (kod === '04' && sub) bukaSub04(sub);
+        }
+
+        function bukaSub01(sub) {
+            sub01Aktif = sub;
+            ['staf', 'jadual', 'lawatan', 'menu'].forEach(s => {
+                document.getElementById('p01-' + s).classList.add('hidden');
+                document.getElementById('s01-' + s).className = 'px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer';
+            });
+            document.getElementById('p01-' + sub).classList.remove('hidden');
+            document.getElementById('s01-' + sub).className = 'px-4 py-2 rounded-xl text-xs font-bold bg-[#0b1730] text-white whitespace-nowrap cursor-pointer';
+        }
+
+        function bukaSub02(sub) {
+            sub02Aktif = sub;
+            ['enrolmen', 'bilik', 'pengawas'].forEach(s => {
+                document.getElementById('p02-' + s).classList.add('hidden');
+                document.getElementById('s02-' + s).className = 'px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 whitespace-nowrap cursor-pointer';
+            });
+            document.getElementById('p02-' + sub).classList.remove('hidden');
+            document.getElementById('s02-' + sub).className = 'px-4 py-2 rounded-xl text-xs font-bold bg-[#0b1730] text-white whitespace-nowrap cursor-pointer';
+        }
+
+        function bukaSub03(sub) {
+            sub03Aktif = sub;
+            ['harian', 'rollcall', 'kesihatan', 'prep'].forEach(s => {
+                document.getElementById('p03-' + s).classList.add('hidden');
+                document.getElementById('s03-' + s).className = 'px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 whitespace-nowrap transition cursor-pointer';
+            });
+            document.getElementById('p03-' + sub).classList.remove('hidden');
+            document.getElementById('s03-' + sub).className = 'px-4 py-2 rounded-xl text-xs font-bold bg-[#047857] text-white whitespace-nowrap cursor-pointer';
+        }
+
+        function bukaSub04(sub) {
+            sub04Aktif = sub;
+            ['direktori', 'kes', 'kerosakan'].forEach(s => {
+                document.getElementById('p04-' + s).classList.add('hidden');
+                document.getElementById('s04-' + s).className = 'px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 whitespace-nowrap transition cursor-pointer';
+            });
+            document.getElementById('p04-' + sub).classList.remove('hidden');
+            document.getElementById('s04-' + sub).className = 'px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 text-white whitespace-nowrap cursor-pointer';
+        }
+
+        function butangTindakan(jenis, idx) {
+            return `
+                <td class="py-2.5 px-3 text-right whitespace-nowrap">
+                    <div class="inline-flex items-center gap-1.5">
+                        <button type="button" onclick="bukaBorang('${jenis}', ${idx})" class="px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-[11px] cursor-pointer">Sunting</button>
+                        <button type="button" onclick="padamRekod('${jenis}', ${idx})" class="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] cursor-pointer">Padam</button>
+                    </div>
+                </td>
+            `;
+        }
+
+        function paparDashboard() {
+            const aOcc = (db.aspura || []).reduce((s, r) => s + Number(r.occ || 0), 0);
+            const aCap = (db.aspura || []).reduce((s, r) => s + Number(r.cap || 0), 0);
+            const iOcc = (db.aspuri || []).reduce((s, r) => s + Number(r.occ || 0), 0);
+            const iCap = (db.aspuri || []).reduce((s, r) => s + Number(r.cap || 0), 0);
+            document.getElementById('dash-occ').innerText = aOcc + iOcc;
+            document.getElementById('dash-cap').innerText = aCap + iCap;
+            document.getElementById('dash-split').innerText = `Aspura: ${aOcc} • Aspuri: ${iOcc}`;
+            document.getElementById('dash-harian-count').innerText = (db.harianRekod || []).length;
+            const aktifRosak = (db.aduanKerosakan || []).filter(r => r.status !== 'Selesai Dibaiki').length;
+            document.getElementById('dash-rosak-count').innerText = aktifRosak;
+            const j0 = (db.jadual || [])[0];
+            if (j0) {
+                document.getElementById('dash-duty-main').innerText = j0.duty;
+                document.getElementById('dash-duty-sub').innerText = j0.standby;
+            }
+        }
+
+        function kemaskiniPilihanBulan(selectId, senaraiRekod) {
+            const sel = document.getElementById(selectId);
+            if (!sel) return;
+            const nilaiSemasa = sel.value || 'Semua';
+            const bulanDitemui = Array.from(new Set([
+                ...BULAN_SENARAI,
+                ...(senaraiRekod || []).map(r => r.month).filter(Boolean)
+            ]));
+            sel.innerHTML = `<option value="Semua">Semua Bulan</option>` + bulanDitemui.map(b => `<option value="${b}">${b}</option>`).join('');
+            sel.value = Array.from(sel.options).some(o => o.value === nilaiSemasa) ? nilaiSemasa : 'Semua';
+        }
+
+        function paparModul01() {
+            document.getElementById('tb-staf').innerHTML = (db.staf || []).map((s, i) => `
+                <tr>
+                    <td class="py-3 px-4 text-slate-500 font-semibold">${i + 1}</td>
+                    <td class="py-3 px-4 font-extrabold text-slate-900">${s.name}</td>
+                    <td class="py-3 px-4 font-bold text-emerald-700">${s.role}</td>
+                    <td class="py-3 px-4 text-slate-700">${s.zone}</td>
+                    <td class="py-3 px-4 font-bold">${s.phone}</td>
+                    ${butangTindakan('staf', i)}
+                </tr>
+            `).join('');
+
+            kemaskiniPilihanBulan('filter-bulan-jadual', db.jadual);
+            const bulanJadual = document.getElementById('filter-bulan-jadual')?.value || 'Semua';
+            const jadualDitapis = (db.jadual || []).map((j, i) => ({ j, i })).filter(({ j }) => bulanJadual === 'Semua' || (j.month || 'November 2026') === bulanJadual);
+            document.getElementById('tb-jadual').innerHTML = jadualDitapis.length ? jadualDitapis.map(({ j, i }) => `
+                <tr>
+                    <td class="py-3 px-4 font-bold text-slate-700">${j.month || 'November 2026'}</td>
+                    <td class="py-3 px-4 font-extrabold text-slate-900">${j.period}</td>
+                    <td class="py-3 px-4 font-bold text-blue-700">${j.duty}</td>
+                    <td class="py-3 px-4 text-slate-700">${j.standby}</td>
+                    <td class="py-3 px-4 text-slate-600">${j.note}</td>
+                    ${butangTindakan('jadual', i)}
+                </tr>
+            `).join('') : `<tr><td colspan="6" class="py-5 px-4 text-center text-slate-500">Tiada rekod jadual bertugas untuk bulan ${bulanJadual}.</td></tr>`;
+
+            kemaskiniPilihanBulan('filter-bulan-lawatan', db.lawatan);
+            const bulanLawatan = document.getElementById('filter-bulan-lawatan')?.value || 'Semua';
+            const lawatanDitapis = (db.lawatan || []).map((l, i) => ({ l, i })).filter(({ l }) => bulanLawatan === 'Semua' || (l.month || 'November 2026') === bulanLawatan);
+            document.getElementById('tb-lawatan').innerHTML = lawatanDitapis.length ? lawatanDitapis.map(({ l, i }) => `
+                <tr>
+                    <td class="py-3 px-4 font-bold text-slate-700">${l.month || 'November 2026'}</td>
+                    <td class="py-3 px-4 font-extrabold text-slate-900">${l.date}</td>
+                    <td class="py-3 px-4 text-slate-600">${l.time}</td>
+                    <td class="py-3 px-4 font-extrabold text-slate-900">${l.zone}</td>
+                    <td class="py-3 px-4 text-slate-700">${l.wardens}</td>
+                    <td class="py-3 px-4 font-bold text-emerald-700">${l.status}</td>
+                    ${butangTindakan('lawatan', i)}
+                </tr>
+            `).join('') : `<tr><td colspan="7" class="py-5 px-4 text-center text-slate-500">Tiada rekod lawatan mengejut untuk bulan ${bulanLawatan}.</td></tr>`;
+
+            const mRows = (db.menus && db.menus[mingguAktif]) || [];
+            document.getElementById('tb-menu').innerHTML = mRows.map((m, i) => `
+                <tr>
+                    <td class="py-3 px-3 font-extrabold text-slate-900">${m.hari}</td>
+                    <td class="py-3 px-3 text-slate-700">${m.bf}</td>
+                    <td class="py-3 px-3 text-slate-700">${m.sn1}</td>
+                    <td class="py-3 px-3 text-slate-700">${m.lu}</td>
+                    <td class="py-3 px-3 text-slate-700">${m.sn2}</td>
+                    <td class="py-3 px-3 text-slate-700">${m.dn}</td>
+                    ${butangTindakan('menu', i)}
+                </tr>
+            `).join('');
+        }
+
+        function pilihMingguMenu(m) {
+            mingguAktif = m;
+            [1, 2, 3, 4].forEach(n => {
+                document.getElementById('mbtn-' + n).className = n === m
+                    ? 'px-3 py-1.5 rounded-lg text-xs font-bold bg-[#0b1730] text-white cursor-pointer'
+                    : 'px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-200 cursor-pointer';
+            });
+            paparModul01();
+        }
+
+        function setPenapisPengawas(mode) {
+            penapisPengawas = mode;
+            ['semua', 'aspura', 'aspuri'].forEach(m => {
+                const btn = document.getElementById('pf-' + m);
+                btn.className = m === mode
+                    ? 'px-3.5 py-1.5 rounded-xl text-xs font-bold bg-[#0b1730] text-white cursor-pointer'
+                    : 'px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer';
+            });
+            paparPengawas();
+        }
+
+        function paparPengawas() {
+            const senarai = db.pengawas || [];
+            const kpL = senarai.find(x => (x.post || '').toLowerCase().includes('ketua pengawas') && (x.post || '').toLowerCase().includes('aspura'));
+            const kpP = senarai.find(x => (x.post || '').toLowerCase().includes('ketua pengawas') && (x.post || '').toLowerCase().includes('aspuri'));
+            if (kpL) {
+                document.getElementById('kp-aspura-nama').innerText = kpL.name;
+                document.getElementById('kp-aspura-meta').innerHTML = `Kelas: <strong>${kpL.cls}</strong> &bull; Bilik: <strong>${kpL.room}</strong> &bull; Sukan: <strong>${kpL.sport}</strong>`;
+            }
+            if (kpP) {
+                document.getElementById('kp-aspuri-nama').innerText = kpP.name;
+                document.getElementById('kp-aspuri-meta').innerHTML = `Kelas: <strong>${kpP.cls}</strong> &bull; Bilik: <strong>${kpP.room}</strong> &bull; Sukan: <strong>${kpP.sport}</strong>`;
+            }
+            const q = (document.getElementById('cari-pengawas')?.value || '').trim().toLowerCase();
+            const ditapis = senarai.map((pg, i) => ({ pg, i })).filter(({ pg }) => {
+                const teks = `${pg.post || ''} ${pg.name || ''} ${pg.cls || ''} ${pg.room || ''} ${pg.sport || ''} ${pg.task || ''}`.toLowerCase();
+                const isAspuri = teks.includes('aspuri') || (pg.room || '').toLowerCase().startsWith('blok');
+                if (penapisPengawas === 'aspura' && isAspuri) return false;
+                if (penapisPengawas === 'aspuri' && !isAspuri) return false;
+                if (q && !teks.includes(q)) return false;
+                return true;
+            });
+            document.getElementById('tb-pengawas').innerHTML = ditapis.length ? ditapis.map(({ pg, i }) => {
+                const teks = `${pg.post || ''} ${pg.room || ''}`.toLowerCase();
+                const isAspuri = teks.includes('aspuri') || (pg.room || '').toLowerCase().startsWith('blok');
+                const badge = isAspuri ? 'bg-rose-100 text-rose-800' : 'bg-blue-100 text-blue-800';
+                return `
+                    <tr>
+                        <td class="py-3.5 px-4"><span class="inline-block px-2.5 py-1 rounded-lg ${badge} font-bold text-[11px]">${pg.post}</span></td>
+                        <td class="py-3.5 px-4 font-extrabold text-slate-900">${pg.name}</td>
+                        <td class="py-3.5 px-3 font-semibold text-slate-700">${pg.cls}</td>
+                        <td class="py-3.5 px-3 font-semibold text-slate-700">${pg.room}</td>
+                        <td class="py-3.5 px-3 font-semibold text-slate-700">${pg.sport}</td>
+                        <td class="py-3.5 px-4 text-slate-600">${pg.task || ''}</td>
+                        ${butangTindakan('pengawas', i)}
+                    </tr>
+                `;
+            }).join('') : `<tr><td colspan="7" class="py-6 px-4 text-center text-slate-500">Tiada rekod pengawas sepadan.</td></tr>`;
+        }
+
+        function paparModul02() {
+            const aRows = db.aspura || [];
+            const iRows = db.aspuri || [];
+            const aCap = aRows.reduce((s, r) => s + Number(r.cap || 0), 0);
+            const aOcc = aRows.reduce((s, r) => s + Number(r.occ || 0), 0);
+            const aVac = Math.max(0, aCap - aOcc);
+            const iCap = iRows.reduce((s, r) => s + Number(r.cap || 0), 0);
+            const iOcc = iRows.reduce((s, r) => s + Number(r.occ || 0), 0);
+            const iVac = Math.max(0, iCap - iOcc);
+            document.getElementById('badge-aspura').innerText = `${aOcc} / ${aCap} Katil`;
+            document.getElementById('badge-aspuri').innerText = `${iOcc} / ${iCap} Katil`;
+
+            document.getElementById('tb-aspura').innerHTML = aRows.map((r, i) => `
+                <tr>
+                    <td class="py-2.5 px-4 font-bold text-slate-900">${r.room}</td>
+                    <td class="py-2.5 px-3">${r.cap}</td>
+                    <td class="py-2.5 px-3 font-bold text-sky-700">${r.occ}</td>
+                    <td class="py-2.5 px-3 font-bold text-emerald-700">${Math.max(0, Number(r.cap || 0) - Number(r.occ || 0))}</td>
+                    ${butangTindakan('aspura', i)}
+                </tr>
+            `).join('') + `<tr class="bg-sky-50/80 font-extrabold"><td class="py-3 px-4">JUMLAH ASPURA (${aRows.length} Bilik)</td><td class="py-3 px-3">${aCap}</td><td class="py-3 px-3 text-sky-700">${aOcc}</td><td class="py-3 px-3 text-emerald-700">${aVac}</td><td></td></tr>`;
+
+            document.getElementById('tb-aspuri').innerHTML = iRows.map((r, i) => `
+                <tr>
+                    <td class="py-2.5 px-4 font-bold text-slate-900">${r.room}</td>
+                    <td class="py-2.5 px-3">${r.cap}</td>
+                    <td class="py-2.5 px-3 font-bold text-rose-700">${r.occ}</td>
+                    <td class="py-2.5 px-3 font-bold text-emerald-700">${Math.max(0, Number(r.cap || 0) - Number(r.occ || 0))}</td>
+                    ${butangTindakan('aspuri', i)}
+                </tr>
+            `).join('') + `<tr class="bg-rose-50/80 font-extrabold"><td class="py-3 px-4">JUMLAH ASPURI (${iRows.length} Bilik)</td><td class="py-3 px-3">${iCap}</td><td class="py-3 px-3 text-rose-700">${iOcc}</td><td class="py-3 px-3 text-emerald-700">${iVac}</td><td></td></tr>`;
+
+            const sel = document.getElementById('pilih-bilik');
+            sel.innerHTML = ROOMS_24.map(r => `<option value="${r}">${r}</option>`).join('');
+            sel.value = bilikAktif;
+
+            const kp = (db.kepimpinan && db.kepimpinan[bilikAktif]) || {
+                pic: 'Cikgu Aldrin', pref: `Pengawas Bilik ${bilikAktif}`, lead: `Ketua Bilik ${bilikAktif}`, asst: `Penolong Bilik ${bilikAktif}`
+            };
+            document.getElementById('kp-pic').innerText = kp.pic;
+            document.getElementById('kp-pref').innerText = kp.pref;
+            document.getElementById('kp-lead').innerText = kp.lead;
+            document.getElementById('kp-asst').innerText = kp.asst;
+
+            const pRows = (db.penghuni || []).map((p, i) => ({ p, i })).filter(({ p }) => p.room === bilikAktif);
+            document.getElementById('tb-penghuni').innerHTML = pRows.length ? pRows.map(({ p, i }) => `
+                <tr>
+                    <td class="py-3 px-4 font-extrabold">${p.room}</td>
+                    <td class="py-3 px-4">${p.bed}</td>
+                    <td class="py-3 px-4 font-extrabold">${p.name}</td>
+                    <td class="py-3 px-4">${p.cls}</td>
+                    <td class="py-3 px-4">${p.sport}</td>
+                    ${butangTindakan('penghuni', i)}
+                </tr>
+            `).join('') : `<tr><td colspan="6" class="py-5 px-4 text-center text-slate-500">Tiada penghuni disenaraikan untuk ${bilikAktif}.</td></tr>`;
+
+            paparPengawas();
+        }
+
+        function tukarBilik(r) {
+            bilikAktif = r;
+            paparModul02();
+        }
+
+        function bukaKepimpinanBilik() {
+            const kp = (db.kepimpinan && db.kepimpinan[bilikAktif]) || { pic: 'Cikgu Aldrin', pref: `Pengawas Bilik ${bilikAktif}`, lead: `Ketua Bilik ${bilikAktif}`, asst: `Penolong Bilik ${bilikAktif}` };
+            document.getElementById('m-type').value = 'kepimpinan';
+            document.getElementById('m-idx').value = -1;
+            document.getElementById('modal-title').innerText = `Sunting Kepimpinan — ${bilikAktif}`;
+            document.getElementById('m-fields').innerHTML = `
+                <div><label class="block text-xs font-bold mb-1">Warden Bilik (PIC)</label><input type="text" id="mf-pic" value="${kp.pic}" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"></div>
+                <div><label class="block text-xs font-bold mb-1">Pengawas Bilik</label><input type="text" id="mf-pref" value="${kp.pref}" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"></div>
+                <div><label class="block text-xs font-bold mb-1">Ketua Bilik</label><input type="text" id="mf-lead" value="${kp.lead}" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"></div>
+                <div><label class="block text-xs font-bold mb-1">Penolong Bilik</label><input type="text" id="mf-asst" value="${kp.asst}" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs"></div>
+            `;
+            const m = document.getElementById('form-modal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+        }
+
+        function kiraImbanganHarian() {
+            const tot = Number(document.getElementById('m3-h-tot').value || 0);
+            const sum = ['m3-h-pres', 'm3-h-abs', 'm3-h-perm', 'm3-h-sick'].reduce((s, id) => s + Number(document.getElementById(id).value || 0), 0);
+            document.getElementById('m3-h-balance').innerText = `Seimbang (${sum} / ${tot})`;
+        }
+
+        function simpanLaporanHarian() {
+            if (!document.getElementById('m3-h-conf').checked) {
+                alert('Sila tanda kotak pengesahan terlebih dahulu.');
+                return;
+            }
+            const warden = document.getElementById('m3-h-warden').value.trim() || 'Warden Bertugas';
+            db.harianRekod.unshift({
+                date: document.getElementById('m3-h-date').value.trim(),
+                day: document.getElementById('m3-h-day').value.trim(),
+                warden,
+                status: document.getElementById('m3-h-inclvl').value,
+                total: Number(document.getElementById('m3-h-tot').value || 0),
+                present: Number(document.getElementById('m3-h-pres').value || 0),
+                perm: Number(document.getElementById('m3-h-perm').value || 0),
+                sick: Number(document.getElementById('m3-h-sick').value || 0),
+                absent: Number(document.getElementById('m3-h-abs').value || 0),
+                aspects: {
+                    makanan: document.getElementById('m3-asp-1').value,
+                    kebersihan: document.getElementById('m3-asp-2').value,
+                    keselamatan: document.getElementById('m3-asp-3').value,
+                    kesihatan: document.getElementById('m3-asp-4').value,
+                    utiliti: document.getElementById('m3-asp-5').value,
+                    disiplin: document.getElementById('m3-asp-6').value
+                },
+                incCount: Number(document.getElementById('m3-h-incnum').value || 0),
+                summary: document.getElementById('m3-h-sum').value.trim(),
+                action: document.getElementById('m3-h-act').value.trim()
+            });
+            simpanDB();
+        }
+
+        function simpanRollCall() {
+            const warden = document.getElementById('m3-rc-warden').value.trim() || 'Warden Pengendali';
+            const session = document.getElementById('m3-rc-ses').value.trim() || 'Sesi Taklimat / Roll Call';
+            db.rollCallRekod.unshift({
+                date: document.getElementById('m3-rc-date').value.trim(),
+                session,
+                zone: document.getElementById('m3-rc-zon').value,
+                present: Number(document.getElementById('m3-rc-pres').value || 0),
+                absent: Number(document.getElementById('m3-rc-abs').value || 0),
+                note: document.getElementById('m3-rc-note').value.trim(),
+                absentList: document.getElementById('m3-rc-absentlist').value.trim(),
+                warden
+            });
+            simpanDB();
+        }
+
+        function simpanKesKesihatan() {
+            const name = document.getElementById('m3-wl-name').value.trim();
+            const desc = document.getElementById('m3-wl-desc').value.trim();
+            if (!name || !desc) return alert('Sila lengkapkan Nama Penuh Murid dan Keterangan.');
+            db.kesKesihatan.unshift({
+                date: document.getElementById('m3-wl-date').value.trim(),
+                cat: document.getElementById('m3-wl-cat').value.toUpperCase(),
+                name,
+                meta: document.getElementById('m3-wl-rs').value.trim() || 'Asrama SMK Tabuan Jaya',
+                desc,
+                status: document.getElementById('m3-wl-st').value
+            });
+            document.getElementById('m3-wl-name').value = '';
+            document.getElementById('m3-wl-desc').value = '';
+            simpanDB();
+        }
+
+        function kemaskiniStatusKes(idx, stBaru) {
+            if (db.kesKesihatan && db.kesKesihatan[idx]) {
+                db.kesKesihatan[idx].status = stBaru;
+                simpanDB();
+            }
+        }
+
+        function paparKelasPrep() {
+            let pSum = 0, aSum = 0;
+            document.getElementById('m3-p-classes').innerHTML = (db.prepKelas || []).map((r, i) => {
+                pSum += Number(r.present || 0);
+                aSum += Number(r.absent || 0);
+                return `
+                    <tr>
+                        <td class="py-2 px-4 font-semibold text-slate-600">${r.form}</td>
+                        <td class="py-2 px-3 font-extrabold text-slate-900">${r.cls}</td>
+                        <td class="py-2 px-3"><input type="number" value="${r.present}" onchange="kemaskiniKelasPrep(${i},'present',this.value)" class="w-16 px-2 py-1 rounded-lg border border-emerald-200 bg-emerald-50/40 text-emerald-700 font-extrabold text-xs"></td>
+                        <td class="py-2 px-3"><input type="number" value="${r.absent}" onchange="kemaskiniKelasPrep(${i},'absent',this.value)" class="w-16 px-2 py-1 rounded-lg border border-rose-200 bg-rose-50/40 text-rose-700 font-extrabold text-xs"></td>
+                        <td class="py-2 px-4"><input type="text" value="${r.note || ''}" onchange="kemaskiniKelasPrep(${i},'note',this.value)" placeholder="Catatan / sebab..." class="w-full px-2.5 py-1 rounded-lg border border-slate-200 text-xs"></td>
+                    </tr>
+                `;
+            }).join('');
+            document.getElementById('m3-p-totals').innerText = `Hadir: ${pSum} • Tidak Hadir: ${aSum}`;
+        }
+
+        function kemaskiniKelasPrep(i, field, val) {
+            db.prepKelas[i][field] = (field === 'present' || field === 'absent') ? (Number(val) || 0) : val;
+            simpanDB();
+        }
+
+        function simpanLaporanPrep() {
+            const warden = document.getElementById('m3-p-warden').value.trim() || 'Warden Bertugas Prep';
+            const pSum = (db.prepKelas || []).reduce((s, r) => s + Number(r.present || 0), 0);
+            const aSum = (db.prepKelas || []).reduce((s, r) => s + Number(r.absent || 0), 0);
+            db.prepRekod.unshift({
+                date: document.getElementById('m3-p-date').value.trim(),
+                warden,
+                status: document.getElementById('m3-p-st').value,
+                present: pSum,
+                absent: aSum,
+                timeSlot: '7.30 - 9.00 mlm',
+                summary: document.getElementById('m3-p-sum').value.trim(),
+                classes: JSON.parse(JSON.stringify(db.prepKelas || []))
+            });
+            simpanDB();
+        }
+
+        function paparModul03() {
+            kiraImbanganHarian();
+
+            document.getElementById('m3-h-cnt').innerText = (db.harianRekod || []).length;
+            document.getElementById('m3-h-list').innerHTML = (db.harianRekod || []).map((r, i) => `
+                <div class="rounded-xl border border-slate-200 p-3.5 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-extrabold text-slate-900">${r.date} (${r.day})</span>
+                        <span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px] font-bold">${r.status}</span>
+                    </div>
+                    <p class="text-[11px] text-slate-600">Warden: <strong>${r.warden}</strong></p>
+                    <p class="text-[11px] text-slate-500">Hadir: ${r.present} | Kebenaran: ${r.perm} | Sakit: ${r.sick} | Tidak Hadir: ${r.absent}</p>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="cetakTerasing('m03-harian-item', ${i})" class="flex-1 bg-[#0b1730] hover:bg-slate-800 text-white text-[11px] font-bold py-1.5 rounded-lg cursor-pointer">&#128424; Cetak Laporan Ini</button>
+                        <button type="button" onclick="padamSub03('harianRekod', ${i})" class="px-2.5 py-1.5 rounded-lg bg-rose-600 text-white text-[11px] font-bold cursor-pointer">Padam</button>
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('m3-rc-list').innerHTML = (db.rollCallRekod || []).map((r, i) => `
+                <div class="rounded-xl border border-slate-200 p-3.5 space-y-1.5">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-xs font-extrabold text-slate-900">${r.date}</span>
+                        <span class="px-2 py-0.5 rounded bg-sky-50 text-sky-700 text-[10px] font-bold">${r.session}</span>
+                    </div>
+                    <p class="text-[11px] font-semibold text-slate-700">${r.zone}</p>
+                    <p class="text-[11px] font-bold text-emerald-700">Hadir: ${r.present} &bull; <span class="text-rose-600">Tidak Hadir/Lewat: ${r.absent}</span></p>
+                    <p class="text-[11px] text-slate-600">${r.note}</p>
+                    <div class="flex justify-end gap-2 pt-1">
+                        <button type="button" onclick="cetakTerasing('m03-rollcall-item', ${i})" class="px-2.5 py-1 rounded-lg bg-amber-400 hover:bg-amber-500 text-slate-950 text-[10px] font-extrabold cursor-pointer">&#128424; Cetak Rekod Ini</button>
+                        <button type="button" onclick="padamSub03('rollCallRekod', ${i})" class="px-2.5 py-1 rounded-lg bg-rose-600 text-white text-[10px] font-bold cursor-pointer">Padam</button>
+                    </div>
+                </div>
+            `).join('');
+
+            const filterSt = document.getElementById('m3-wl-filter')?.value || 'Semua';
+            const cases = (db.kesKesihatan || []).map((c, i) => ({ c, i })).filter(({ c }) => filterSt === 'Semua' || c.status === filterSt);
+            document.getElementById('m3-wl-list').innerHTML = cases.length ? cases.map(({ c, i }) => `
+                <div class="rounded-xl border border-slate-200 p-4 space-y-2">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-[10px] font-extrabold uppercase text-slate-500">${c.cat} &bull; ${c.date}</span>
+                        <span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-bold">${c.status}</span>
+                    </div>
+                    <div class="text-xs font-extrabold text-slate-900">${c.name} <span class="font-normal text-slate-500">(${c.meta})</span></div>
+                    <p class="text-xs text-slate-600">${c.desc}</p>
+                    <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+                        <div class="flex items-center gap-2 text-xs">
+                            <span class="text-slate-500">Kemaskini Status:</span>
+                            <select onchange="kemaskiniStatusKes(${i}, this.value)" class="px-2.5 py-1 rounded-lg border border-slate-300 text-xs font-bold bg-white">
+                                <option ${c.status === 'Dalam Rawatan / Pantauan' ? 'selected' : ''}>Dalam Rawatan / Pantauan</option>
+                                <option ${c.status === 'Selesai / Pulih' ? 'selected' : ''}>Selesai / Pulih</option>
+                                <option ${c.status === 'Rujukan Klinik / Hospital' ? 'selected' : ''}>Rujukan Klinik / Hospital</option>
+                            </select>
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="button" onclick="cetakTerasing('m03-kesihatan-item', ${i})" class="px-2.5 py-1 rounded-lg bg-amber-400 hover:bg-amber-500 text-slate-950 text-[11px] font-extrabold cursor-pointer">&#128424; Cetak Kes Ini</button>
+                            <button type="button" onclick="padamSub03('kesKesihatan', ${i})" class="px-2.5 py-1 rounded-lg bg-rose-600 text-white text-[11px] font-bold cursor-pointer">Padam</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('') : `<p class="text-xs text-slate-500 py-4 text-center">Tiada rekod kesihatan / kebajikan untuk status ini.</p>`;
+
+            paparKelasPrep();
+            document.getElementById('m3-p-cnt').innerText = (db.prepRekod || []).length;
+            document.getElementById('m3-p-list').innerHTML = (db.prepRekod || []).map((r, i) => `
+                <div class="rounded-xl border border-slate-200 p-3.5 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-extrabold text-slate-900">${r.date}</span>
+                        <span class="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 text-[10px] font-bold">${r.status}</span>
+                    </div>
+                    <p class="text-[11px] text-slate-600">Pemantau: <strong>${r.warden}</strong> &bull; 7.30 - 9.00 mlm</p>
+                    <p class="text-[11px] font-bold text-emerald-700">Hadir: ${r.present} &bull; <span class="text-rose-600">Tidak Hadir: ${r.absent}</span></p>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="cetakTerasing('m03-prep-item', ${i})" class="flex-1 bg-[#0b1730] hover:bg-slate-800 text-white text-[11px] font-bold py-1.5 rounded-lg cursor-pointer">&#128424; Cetak Laporan Prep</button>
+                        <button type="button" onclick="padamSub03('prepRekod', ${i})" class="px-2.5 py-1.5 rounded-lg bg-rose-600 text-white text-[11px] font-bold cursor-pointer">Padam</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function padamSub03(key, idx) {
+            if (confirm('Padam rekod ini?')) {
+                db[key].splice(idx, 1);
+                simpanDB();
+            }
+        }
+
+        function simpanKesKecemasan() {
+            const name = document.getElementById('m4-k-name').value.trim();
+            const desc = document.getElementById('m4-k-desc').value.trim();
+            if (!name || !desc) return alert('Sila lengkapkan Nama Murid Terlibat dan Ringkasan Kes.');
+            db.kesKecemasan.unshift({
+                date: document.getElementById('m4-k-date').value.trim(),
+                cat: document.getElementById('m4-k-cat').value.toUpperCase(),
+                name,
+                meta: document.getElementById('m4-k-meta').value.trim() || 'Asrama SMK Tabuan Jaya',
+                desc,
+                status: document.getElementById('m4-k-st').value
+            });
+            document.getElementById('m4-k-name').value = '';
+            document.getElementById('m4-k-desc').value = '';
+            simpanDB();
+        }
+
+        function kemaskiniStatusKes04(idx, stBaru) {
+            if (db.kesKecemasan && db.kesKecemasan[idx]) {
+                db.kesKecemasan[idx].status = stBaru;
+                simpanDB();
+            }
+        }
+
+        function simpanAduanKerosakan() {
+            const loc = document.getElementById('m4-r-loc').value.trim();
+            const desc = document.getElementById('m4-r-desc').value.trim();
+            if (!loc || !desc) return alert('Sila lengkapkan Lokasi / Blok / Bilik dan Keterangan Kerosakan.');
+            db.aduanKerosakan.unshift({
+                loc,
+                cat: document.getElementById('m4-r-cat').value,
+                rep: document.getElementById('m4-r-rep').value.trim() || 'Warden Asrama',
+                desc,
+                status: document.getElementById('m4-r-st').value
+            });
+            document.getElementById('m4-r-loc').value = '';
+            document.getElementById('m4-r-desc').value = '';
+            simpanDB();
+        }
+
+        function kemaskiniStatusRosak(idx, stBaru) {
+            if (db.aduanKerosakan && db.aduanKerosakan[idx]) {
+                db.aduanKerosakan[idx].status = stBaru;
+                simpanDB();
+            }
+        }
+
+        function paparModul04() {
+            document.getElementById('m4-dir-grid').innerHTML = (db.direktori || []).map((d, i) => `
+                <div class="rounded-2xl border border-rose-200 bg-rose-50/30 p-4 flex flex-col justify-between gap-3">
+                    <div>
+                        <span class="inline-block px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-extrabold uppercase">${d.role}</span>
+                        <h4 class="text-sm font-extrabold text-slate-900 mt-2">${d.title}</h4>
+                        <p class="text-base font-extrabold text-rose-700 mt-1">${d.phone}</p>
+                    </div>
+                    <div class="flex items-center justify-between gap-2 pt-2 border-t border-rose-100">
+                        <a href="tel:${d.phone.replace(/[^0-9+]/g, '')}" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-bold">&#128222; Hubungi</a>
+                        <div class="flex gap-1.5">
+                            <button type="button" onclick="bukaBorang('direktori', ${i})" class="px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-[11px] cursor-pointer">Sunting</button>
+                            <button type="button" onclick="padamRekod('direktori', ${i})" class="px-2.5 py-1 rounded-lg bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold text-[11px] cursor-pointer">Padam</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            const kFilter = document.getElementById('m4-k-filter')?.value || 'Semua';
+            const kRows = (db.kesKecemasan || []).map((k, i) => ({ k, i })).filter(({ k }) => kFilter === 'Semua' || k.status === kFilter);
+            document.getElementById('m4-k-list').innerHTML = kRows.length ? kRows.map(({ k, i }) => `
+                <div class="rounded-xl border border-slate-200 p-4 space-y-2">
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="text-[10px] font-extrabold uppercase text-rose-700">${k.cat} &bull; ${k.date}</span>
+                        <span class="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-900 text-[10px] font-bold">${k.status}</span>
+                    </div>
+                    <div class="text-xs font-extrabold text-slate-900">${k.name} <span class="font-normal text-slate-500">(${k.meta})</span></div>
+                    <p class="text-xs text-slate-600">${k.desc}</p>
+                    <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+                        <div class="flex items-center gap-2 text-xs">
+                            <span class="text-slate-500">Status:</span>
+                            <select onchange="kemaskiniStatusKes04(${i}, this.value)" class="px-2.5 py-1 rounded-lg border border-slate-300 text-xs font-bold bg-white">
+                                <option ${k.status === 'Dalam Siasatan / Tindakan' ? 'selected' : ''}>Dalam Siasatan / Tindakan</option>
+                                <option ${k.status === 'Rujukan PK HEM / Lembaga Disiplin' ? 'selected' : ''}>Rujukan PK HEM / Lembaga Disiplin</option>
+                                <option ${k.status === 'Selesai / Kaunseling' ? 'selected' : ''}>Selesai / Kaunseling</option>
+                            </select>
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="button" onclick="cetakTerasing('m04-kes-item', ${i})" class="px-2.5 py-1 rounded-lg bg-amber-400 hover:bg-amber-500 text-slate-950 text-[11px] font-extrabold cursor-pointer">&#128424; Cetak Kes Ini</button>
+                            <button type="button" onclick="padamRekod('kesKecemasan', ${i})" class="px-2.5 py-1 rounded-lg bg-rose-600 text-white text-[11px] font-bold cursor-pointer">Padam</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('') : `<p class="text-xs text-slate-500 py-4 text-center">Tiada rekod kes kecemasan / disiplin untuk status ini.</p>`;
+
+            const rFilter = document.getElementById('m4-r-filter')?.value || 'Semua';
+            const rRows = (db.aduanKerosakan || []).map((r, i) => ({ r, i })).filter(({ r }) => rFilter === 'Semua' || r.status === rFilter);
+            document.getElementById('m4-r-list').innerHTML = rRows.length ? rRows.map(({ r, i }) => {
+                const badge = r.status === 'Selesai Dibaiki' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-900';
+                return `
+                    <div class="rounded-xl border border-slate-200 p-4 space-y-2">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="text-xs font-extrabold text-slate-900">${r.loc}</span>
+                            <span class="px-2.5 py-0.5 rounded-full ${badge} text-[10px] font-bold">${r.status}</span>
+                        </div>
+                        <p class="text-[11px] font-semibold text-slate-500">${r.cat} &bull; ${r.rep}</p>
+                        <p class="text-xs text-slate-700">${r.desc}</p>
+                        <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+                            <div class="flex items-center gap-2 text-xs">
+                                <span class="text-slate-500">Status:</span>
+                                <select onchange="kemaskiniStatusRosak(${i}, this.value)" class="px-2.5 py-1 rounded-lg border border-slate-300 text-xs font-bold bg-white">
+                                    <option ${r.status === 'Baru Dilaporkan' ? 'selected' : ''}>Baru Dilaporkan</option>
+                                    <option ${r.status === 'Dalam Tindakan' ? 'selected' : ''}>Dalam Tindakan</option>
+                                    <option ${r.status === 'Selesai Dibaiki' ? 'selected' : ''}>Selesai Dibaiki</option>
+                                </select>
+                            </div>
+                            <div class="flex gap-2">
+                                <button type="button" onclick="cetakTerasing('m04-rosak-item', ${i})" class="px-2.5 py-1 rounded-lg bg-amber-400 hover:bg-amber-500 text-slate-950 text-[11px] font-extrabold cursor-pointer">&#128424; Cetak Aduan Ini</button>
+                                <button type="button" onclick="padamRekod('aduanKerosakan', ${i})" class="px-2.5 py-1 rounded-lg bg-rose-600 text-white text-[11px] font-bold cursor-pointer">Padam</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('') : `<p class="text-xs text-slate-500 py-4 text-center">Tiada aduan kerosakan untuk status ini.</p>`;
+        }
+
+        const skema = {
+            staf: [['name', 'Nama Penuh'], ['role', 'Jawatan'], ['zone', 'Zon / Blok Seliaan'], ['phone', 'No. Telefon']],
+            jadual: [['month', 'Bulan'], ['period', 'Tarikh / Hari'], ['duty', 'Warden Bertugas'], ['standby', 'Warden Standby'], ['note', 'Catatan']],
+            lawatan: [['month', 'Bulan'], ['date', 'Tarikh'], ['time', 'Masa'], ['zone', 'Zon / Blok'], ['wardens', 'Warden'], ['status', 'Catatan']],
+            menu: [['hari', 'Hari'], ['bf', 'Sarapan (6.00 pg)'], ['sn1', 'Rehat (9.00 pg)'], ['lu', 'Tgh Hari (12.30 tgh)'], ['sn2', 'Petang (5.30 ptg)'], ['dn', 'Malam (9.00 mlm)']],
+            aspura: [['room', 'Nama Bilik'], ['cap', 'Kapasiti'], ['occ', 'Penghuni']],
+            aspuri: [['room', 'Nama Bilik'], ['cap', 'Kapasiti'], ['occ', 'Penghuni']],
+            penghuni: [['room', 'Bilik'], ['bed', 'No. Katil'], ['name', 'Nama Murid'], ['cls', 'Kelas'], ['sport', 'Sukan']],
+            pengawas: [['post', 'Jawatan'], ['name', 'Nama'], ['cls', 'Kelas'], ['room', 'Bilik'], ['sport', 'Sukan'], ['task', 'Tugas']],
+            direktori: [['title', 'Nama / Agensi'], ['role', 'Kategori / Peranan'], ['phone', 'No. Telefon']]
+        };
+
+        function bukaBorang(jenis, idx = -1) {
+            document.getElementById('m-type').value = jenis;
+            document.getElementById('m-idx').value = String(idx);
+            document.getElementById('modal-title').innerText = idx >= 0 ? 'Sunting Rekod' : 'Tambah Rekod';
+            let row = {};
+            if (jenis === 'menu') {
+                row = idx >= 0 && db.menus && db.menus[mingguAktif] ? db.menus[mingguAktif][idx] : { hari: 'Isnin' };
+            } else if (idx >= 0 && Array.isArray(db[jenis]) && db[jenis][idx]) {
+                row = db[jenis][idx];
+            } else if (jenis === 'penghuni') {
+                row = { room: bilikAktif };
+            } else if (jenis === 'jadual' || jenis === 'lawatan') {
+                row = { month: 'November 2026' };
+            }
+            document.getElementById('m-fields').innerHTML = (skema[jenis] || []).map(([k, lbl]) => {
+                if (k === 'month') {
+                    const opts = BULAN_SENARAI.map(b => `<option value="${b}" ${row[k] === b ? 'selected' : ''}>${b}</option>`).join('');
+                    return `
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-1">${lbl}</label>
+                            <select id="mf-${k}" name="${k}" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-semibold bg-white">${opts}</select>
+                        </div>
+                    `;
+                }
+                return `
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">${lbl}</label>
+                        <input type="text" id="mf-${k}" name="${k}" value="${row[k] !== undefined ? String(row[k]).replace(/"/g, '&quot;') : ''}" required class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs">
+                    </div>
+                `;
+            }).join('');
+            const m = document.getElementById('form-modal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+        }
+
+        function tutupBorang() {
+            const m = document.getElementById('form-modal');
+            m.classList.add('hidden'); m.classList.remove('flex');
+        }
+
+        function simpanBorang(e) {
+            e.preventDefault();
+            const jenis = document.getElementById('m-type').value;
+            const idx = parseInt(document.getElementById('m-idx').value, 10);
+            if (jenis === 'kepimpinan') {
+                if (!db.kepimpinan) db.kepimpinan = {};
+                db.kepimpinan[bilikAktif] = {
+                    pic: (document.getElementById('mf-pic')?.value || '').trim(),
+                    pref: (document.getElementById('mf-pref')?.value || '').trim(),
+                    lead: (document.getElementById('mf-lead')?.value || '').trim(),
+                    asst: (document.getElementById('mf-asst')?.value || '').trim()
+                };
+                simpanDB(); tutupBorang(); return;
+            }
+            if (!skema[jenis]) return;
+            const obj = {};
+            skema[jenis].forEach(([k]) => {
+                const raw = (document.getElementById('mf-' + k)?.value || '').trim();
+                obj[k] = ['cap', 'occ'].includes(k) ? (Number(raw) || 0) : raw;
+            });
+            if (jenis === 'menu') {
+                if (idx >= 0) db.menus[mingguAktif][idx] = obj;
+                else db.menus[mingguAktif].push(obj);
+            } else {
+                if (idx >= 0) db[jenis][idx] = obj;
+                else db[jenis].push(obj);
+                if (jenis === 'penghuni' && obj.room) bilikAktif = obj.room;
+            }
+            simpanDB(); tutupBorang();
+        }
+
+        function padamRekod(jenis, idx) {
+            if (confirm('Padam rekod ini?')) {
+                if (jenis === 'menu') db.menus[mingguAktif].splice(idx, 1);
+                else db[jenis].splice(idx, 1);
+                simpanDB();
+            }
+        }
+
+        function rangkaCetakan(tajukLaporan, badanHtml, namaDisediakan) {
+            const pelapor = namaDisediakan || sesiAktif?.name || document.getElementById('active-user-name')?.innerText || 'Cikgu Kolan';
+            return `
+                <div style="border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 16px; text-align: center;">
+                    <div style="font-size: 14px; font-weight: 800; text-transform: uppercase;">Unit Pengurusan Asrama • SMK Tabuan Jaya</div>
+                    <div style="font-size: 11px; color: #334155;">Sekolah Sukan Negeri Sarawak • Kuching, Sarawak</div>
+                    <div style="font-size: 12px; font-weight: 800; color: #0f172a; margin-top: 6px;">${tajukLaporan}</div>
+                </div>
+
+                <div>${badanHtml}</div>
+
+                <div style="margin-top: 28px; padding-top: 14px; border-top: 2px solid #0f172a; display: grid; grid-template-columns: 1fr 1fr; gap: 36px; font-size: 11px;">
+                    <div>
+                        <div style="font-weight: 800; text-transform: uppercase;">Disediakan oleh:</div>
+                        <div style="height: 44px; border-bottom: 1px dotted #475569; margin-top: 10px;"></div>
+                        <div style="font-weight: 800; margin-top: 6px;">${pelapor}</div>
+                        <div style="color: #475569;">Warden Bertugas / Pelapor Asrama, SMK Tabuan Jaya</div>
+                        <div style="color: #64748b; font-size: 10px; margin-top: 2px;">Tarikh: ________________________</div>
+                    </div>
+                    <div>
+                        <div style="font-weight: 800; text-transform: uppercase;">Disahkan oleh:</div>
+                        <div style="height: 44px; border-bottom: 1px dotted #475569; margin-top: 10px;"></div>
+                        <div style="font-weight: 800; margin-top: 6px;">PK HEM / Ketua Warden</div>
+                        <div style="color: #475569;">Penolong Kanan Hal Ehwal Murid / Ketua Warden Asrama</div>
+                        <div style="color: #64748b; font-size: 10px; margin-top: 2px;">Tarikh &amp; Cop Rasmi: _____________</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function cetakTerasing(jenisCetakan, idx = 0) {
+            let tajuk = '';
+            let badan = '';
+            let pelapor = '';
+
+            if (jenisCetakan === 'm01-staf') {
+                tajuk = 'Modul 01 — 1.1 Senarai Warden, Pembantu Warden & Penyelia Asrama';
+                badan = `
+                    <table class="iso-table">
+                        <thead><tr><th>Bil</th><th>Nama Penuh</th><th>Jawatan</th><th>Zon / Blok Seliaan</th><th>No. Telefon</th></tr></thead>
+                        <tbody>
+                            ${(db.staf || []).map((s, i) => `<tr><td>${i + 1}</td><td><strong>${s.name}</strong></td><td>${s.role}</td><td>${s.zone}</td><td>${s.phone}</td></tr>`).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } else if (jenisCetakan === 'm01-jadual') {
+                const bln = document.getElementById('filter-bulan-jadual')?.value || 'Semua';
+                const rows = (db.jadual || []).filter(j => bln === 'Semua' || (j.month || 'November 2026') === bln);
+                tajuk = `Modul 01 — 1.2 Jadual Bertugas Mingguan Warden (${bln})`;
+                badan = `
+                    <table class="iso-table">
+                        <thead><tr><th>Bulan</th><th>Tarikh / Hari</th><th>Warden Bertugas</th><th>Warden Standby</th><th>Catatan</th></tr></thead>
+                        <tbody>
+                            ${rows.map(j => `<tr><td>${j.month || '-'}</td><td><strong>${j.period}</strong></td><td>${j.duty}</td><td>${j.standby}</td><td>${j.note}</td></tr>`).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } else if (jenisCetakan === 'm01-lawatan') {
+                const bln = document.getElementById('filter-bulan-lawatan')?.value || 'Semua';
+                const rows = (db.lawatan || []).filter(l => bln === 'Semua' || (l.month || 'November 2026') === bln);
+                tajuk = `Modul 01 — 1.3 Jadual & Rekod Lawatan Mengejut (${bln})`;
+                badan = `
+                    <table class="iso-table">
+                        <thead><tr><th>Bulan</th><th>Tarikh</th><th>Masa</th><th>Zon / Blok</th><th>Warden</th><th>Catatan</th></tr></thead>
+                        <tbody>
+                            ${rows.map(l => `<tr><td>${l.month || '-'}</td><td><strong>${l.date}</strong></td><td>${l.time}</td><td>${l.zone}</td><td>${l.wardens}</td><td>${l.status}</td></tr>`).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } else if (jenisCetakan === 'm01-menu') {
+                tajuk = `Modul 01 — 1.4 Jadual Menu Makanan Kitaran 4 Minggu (Minggu ${mingguAktif})`;
+                const rows = (db.menus && db.menus[mingguAktif]) || [];
+                badan = `
+                    <table class="iso-table">
+                        <thead><tr><th>Hari</th><th>Sarapan (6.00 pg)</th><th>Rehat (9.00 pg)</th><th>Tgh Hari (12.30 tgh)</th><th>Petang (5.30 ptg)</th><th>Malam (9.00 mlm)</th></tr></thead>
+                        <tbody>
+                            ${rows.map(m => `<tr><td><strong>${m.hari}</strong></td><td>${m.bf}</td><td>${m.sn1}</td><td>${m.lu}</td><td>${m.sn2}</td><td>${m.dn}</td></tr>`).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } else if (jenisCetakan === 'm02-enrolmen') {
+                tajuk = 'Modul 02 — 2.1 Enrolmen Penghuni Asrama Mengikut Bilik';
+                const aRows = db.aspura || [];
+                const iRows = db.aspuri || [];
+                badan = `
+                    <div style="font-weight: 800; margin-bottom: 6px; font-size: 12px;">Aspura — Lelaki</div>
+                    <table class="iso-table" style="margin-bottom: 14px;">
+                        <thead><tr><th>Bilik</th><th>Kapasiti</th><th>Penghuni</th><th>Kosong</th></tr></thead>
+                        <tbody>${aRows.map(r => `<tr><td><strong>${r.room}</strong></td><td>${r.cap}</td><td>${r.occ}</td><td>${Math.max(0, r.cap - r.occ)}</td></tr>`).join('')}</tbody>
+                    </table>
+                    <div style="font-weight: 800; margin-bottom: 6px; font-size: 12px;">Aspuri — Perempuan</div>
+                    <table class="iso-table">
+                        <thead><tr><th>Bilik</th><th>Kapasiti</th><th>Penghuni</th><th>Kosong</th></tr></thead>
+                        <tbody>${iRows.map(r => `<tr><td><strong>${r.room}</strong></td><td>${r.cap}</td><td>${r.occ}</td><td>${Math.max(0, r.cap - r.occ)}</td></tr>`).join('')}</tbody>
+                    </table>
+                `;
+            } else if (jenisCetakan === 'm02-bilik') {
+                tajuk = `Modul 02 — 2.2 Senarai Penghuni & Kepimpinan Bilik (${bilikAktif})`;
+                const kp = (db.kepimpinan && db.kepimpinan[bilikAktif]) || { pic: 'Cikgu Aldrin', pref: '-', lead: '-', asst: '-' };
+                const pRows = (db.penghuni || []).filter(p => p.room === bilikAktif);
+                badan = `
+                    <table class="iso-table" style="margin-bottom: 12px;">
+                        <tbody>
+                            <tr><th style="width:28%;">Warden Bilik (PIC)</th><td>${kp.pic}</td><th style="width:28%;">Pengawas Bilik</th><td>${kp.pref}</td></tr>
+                            <tr><th>Ketua Bilik</th><td>${kp.lead}</td><th>Penolong Bilik</th><td>${kp.asst}</td></tr>
+                        </tbody>
+                    </table>
+                    <table class="iso-table">
+                        <thead><tr><th>Bilik</th><th>No. Katil</th><th>Nama Murid</th><th>Kelas</th><th>Sukan</th></tr></thead>
+                        <tbody>${pRows.length ? pRows.map(p => `<tr><td>${p.room}</td><td>${p.bed}</td><td><strong>${p.name}</strong></td><td>${p.cls}</td><td>${p.sport}</td></tr>`).join('') : `<tr><td colspan="5">Tiada penghuni disenaraikan untuk ${bilikAktif}.</td></tr>`}</tbody>
+                    </table>
+                `;
+            } else if (jenisCetakan === 'm02-pengawas') {
+                tajuk = 'Modul 02 — 2.3 Majlis & Exco Pengawas Asrama';
+                badan = `
+                    <table class="iso-table">
+                        <thead><tr><th>Jawatan</th><th>Nama</th><th>Kelas</th><th>Bilik</th><th>Sukan</th><th>Tugas</th></tr></thead>
+                        <tbody>${(db.pengawas || []).map(pg => `<tr><td><strong>${pg.post}</strong></td><td>${pg.name}</td><td>${pg.cls}</td><td>${pg.room}</td><td>${pg.sport}</td><td>${pg.task || ''}</td></tr>`).join('')}</tbody>
+                    </table>
+                `;
+            } else if (jenisCetakan === 'm03-harian-item') {
+                const r = (db.harianRekod || [])[idx];
+                if (!r) return;
+                pelapor = r.warden;
+                tajuk = `Modul 03 — Laporan Pemantauan Harian Warden (${r.date} • ${r.day})`;
+                const asp = r.aspects || {};
+                badan = `
+                    <table class="iso-table" style="margin-bottom: 12px;">
+                        <tbody>
+                            <tr><th style="width:25%;">Tarikh &amp; Hari</th><td>${r.date} (${r.day})</td><th style="width:25%;">Warden Bertugas</th><td><strong>${r.warden}</strong></td></tr>
+                            <tr><th>Tahap Insiden</th><td><strong>${r.status}</strong> (${r.incCount ?? 0} insiden)</td><th>Jumlah Penghuni</th><td>${r.total ?? '-'}</td></tr>
+                            <tr><th>Hadir / Kebenaran</th><td>Hadir: <strong>${r.present}</strong> • Kebenaran: <strong>${r.perm}</strong></td><th>Sakit / Tidak Hadir</th><td>Sakit: <strong>${r.sick}</strong> • Tidak Hadir: <strong>${r.absent}</strong></td></tr>
+                        </tbody>
+                    </table>
+                    <div style="font-weight: 800; margin-bottom: 6px; font-size: 11px;">Semakan Operasi Harian (6 Aspek)</div>
+                    <table class="iso-table" style="margin-bottom: 12px;">
+                        <tbody>
+                            <tr><th>1. Makanan &amp; Dewan Makan</th><td>${asp.makanan || 'Baik / Memuaskan'}</td><th>2. Kebersihan &amp; Keceriaan</th><td>${asp.kebersihan || 'Baik / Memuaskan'}</td></tr>
+                            <tr><th>3. Keselamatan Asrama</th><td>${asp.keselamatan || 'Baik / Memuaskan'}</td><th>4. Kesihatan &amp; Kebajikan</th><td>${asp.kesihatan || 'Baik / Memuaskan'}</td></tr>
+                            <tr><th>5. Utiliti &amp; Kerosakan</th><td>${asp.utiliti || 'Baik / Memuaskan'}</td><th>6. Disiplin &amp; Sahsiah</th><td>${asp.disiplin || 'Baik / Memuaskan'}</td></tr>
+                        </tbody>
+                    </table>
+                    <table class="iso-table">
+                        <tbody>
+                            <tr><th style="width:28%;">Ringkasan Keadaan / Isu</th><td>${r.summary || '-'}</td></tr>
+                            <tr><th>Tindakan Diambil</th><td>${r.action || '-'}</td></tr>
+                        </tbody>
+                    </table>
+                `;
+            } else if (jenisCetakan === 'm03-rollcall-item') {
+                const r = (db.rollCallRekod || [])[idx];
+                if (!r) return;
+                pelapor = r.warden;
+                tajuk = `Modul 03 — Rekod Taklimat & Roll Call Asrama (${r.date})`;
+                badan = `
+                    <table class="iso-table">
+                        <tbody>
+                            <tr><th style="width:28%;">Tarikh</th><td>${r.date}</td><th style="width:24%;">Sesi</th><td><strong>${r.session}</strong></td></tr>
+                            <tr><th>Zon / Blok</th><td>${r.zone}</td><th>Warden Pengendali</th><td><strong>${r.warden}</strong></td></tr>
+                            <tr><th>Kehadiran</th><td>Hadir: <strong>${r.present}</strong></td><th>Tidak Hadir / Lewat</th><td><strong>${r.absent}</strong></td></tr>
+                            <tr><th>Intipati Taklimat / Arahan</th><td colspan="3">${r.note || '-'}</td></tr>
+                            <tr><th>Senarai Tidak Hadir &amp; Sebab</th><td colspan="3">${r.absentList || '-'}</td></tr>
+                        </tbody>
+                    </table>
+                `;
+            } else if (jenisCetakan === 'm03-kesihatan-item') {
+                const c = (db.kesKesihatan || [])[idx];
+                if (!c) return;
+                tajuk = `Modul 03 — Rekod Kebajikan & Kesihatan Murid (${c.date})`;
+                badan = `
+                    <table class="iso-table">
+                        <tbody>
+                            <tr><th style="width:28%;">Nama Murid</th><td><strong>${c.name}</strong></td><th style="width:24%;">Tarikh</th><td>${c.date}</td></tr>
+                            <tr><th>Bilik &amp; Sukan</th><td>${c.meta}</td><th>Kategori Kes</th><td><strong>${c.cat}</strong></td></tr>
+                            <tr><th>Status Semasa</th><td colspan="3"><strong>${c.status}</strong></td></tr>
+                            <tr><th>Keterangan &amp; Tindakan</th><td colspan="3">${c.desc}</td></tr>
+                        </tbody>
+                    </table>
+                `;
+            } else if (jenisCetakan === 'm03-prep-item') {
+                const r = (db.prepRekod || [])[idx];
+                if (!r) return;
+                pelapor = r.warden;
+                tajuk = `Modul 03 — Laporan Prep Malam (${r.date} • ${r.timeSlot || '7.30 - 9.00 mlm'})`;
+                const clsList = r.classes || db.prepKelas || [];
+                badan = `
+                    <table class="iso-table" style="margin-bottom: 12px;">
+                        <tbody>
+                            <tr><th style="width:25%;">Tarikh</th><td>${r.date}</td><th style="width:25%;">Pemantau Prep</th><td><strong>${r.warden}</strong></td></tr>
+                            <tr><th>Status Umum</th><td><strong>${r.status}</strong></td><th>Jumlah Kehadiran</th><td>Hadir: <strong>${r.present}</strong> • Tidak Hadir: <strong>${r.absent}</strong></td></tr>
+                            <tr><th>Rumusan Prep Malam</th><td colspan="3">${r.summary || '-'}</td></tr>
+                        </tbody>
+                    </table>
+                    <table class="iso-table">
+                        <thead><tr><th>Tingkatan</th><th>Kelas</th><th>Hadir</th><th>Tidak Hadir</th><th>Catatan / Sebab</th></tr></thead>
+                        <tbody>${clsList.map(x => `<tr><td>${x.form}</td><td><strong>${x.cls}</strong></td><td>${x.present}</td><td>${x.absent}</td><td>${x.note || '-'}</td></tr>`).join('')}</tbody>
+                    </table>
+                `;
+            } else if (jenisCetakan === 'm04-direktori') {
+                tajuk = 'Modul 04 — 1. Direktori Talian Kecemasan & Pihak Berwajib';
+                badan = `
+                    <table class="iso-table">
+                        <thead><tr><th>Bil</th><th>Nama / Agensi</th><th>Kategori / Peranan</th><th>No. Telefon</th></tr></thead>
+                        <tbody>${(db.direktori || []).map((d, i) => `<tr><td>${i + 1}</td><td><strong>${d.title}</strong></td><td>${d.role}</td><td><strong>${d.phone}</strong></td></tr>`).join('')}</tbody>
+                    </table>
+                `;
+            } else if (jenisCetakan === 'm04-kes-item') {
+                const k = (db.kesKecemasan || [])[idx];
+                if (!k) return;
+                tajuk = `Modul 04 — 2. Rekod Kes Kecemasan / Disiplin (${k.date})`;
+                badan = `
+                    <table class="iso-table">
+                        <tbody>
+                            <tr><th style="width:28%;">Nama Murid Terlibat</th><td><strong>${k.name}</strong></td><th style="width:24%;">Tarikh &amp; Masa</th><td>${k.date}</td></tr>
+                            <tr><th>Bilik &amp; Kelas</th><td>${k.meta}</td><th>Jenis Kes</th><td><strong>${k.cat}</strong></td></tr>
+                            <tr><th>Status Tindakan</th><td colspan="3"><strong>${k.status}</strong></td></tr>
+                            <tr><th>Ringkasan Kes &amp; Tindakan</th><td colspan="3">${k.desc}</td></tr>
+                        </tbody>
+                    </table>
+                `;
+            } else if (jenisCetakan === 'm04-rosak-item') {
+                const r = (db.aduanKerosakan || [])[idx];
+                if (!r) return;
+                tajuk = `Modul 04 — 3. Borang / Rekod Aduan Kerosakan Asrama`;
+                badan = `
+                    <table class="iso-table">
+                        <tbody>
+                            <tr><th style="width:28%;">Lokasi / Blok / Bilik</th><td><strong>${r.loc}</strong></td><th style="width:24%;">Kategori</th><td>${r.cat}</td></tr>
+                            <tr><th>Pelapor &amp; Tarikh</th><td>${r.rep}</td><th>Status Semasa</th><td><strong>${r.status}</strong></td></tr>
+                            <tr><th>Keterangan Kerosakan</th><td colspan="3">${r.desc}</td></tr>
+                        </tbody>
+                    </table>
+                `;
+            }
+
+            if (!badan) {
+                cetakMenuAktif();
+                return;
+            }
+
+            document.body.classList.add('printing-isolated');
+            const stage = document.getElementById('print-isolated-stage');
+            stage.innerHTML = rangkaCetakan(tajuk, badan, pelapor);
+
+            const bersihkan = () => {
+                stage.innerHTML = '';
+                document.body.classList.remove('printing-isolated');
+                window.removeEventListener('afterprint', bersihkan);
+            };
+            window.addEventListener('afterprint', bersihkan);
+            window.print();
+            setTimeout(bersihkan, 800);
+        }
+
+        function cetakMenuAktif() {
+            if (modulAktif === '01') {
+                if (sub01Aktif === 'staf') return cetakTerasing('m01-staf');
+                if (sub01Aktif === 'jadual') return cetakTerasing('m01-jadual');
+                if (sub01Aktif === 'lawatan') return cetakTerasing('m01-lawatan');
+                if (sub01Aktif === 'menu') return cetakTerasing('m01-menu');
+            }
+            if (modulAktif === '02') {
+                if (sub02Aktif === 'enrolmen') return cetakTerasing('m02-enrolmen');
+                if (sub02Aktif === 'bilik') return cetakTerasing('m02-bilik');
+                if (sub02Aktif === 'pengawas') return cetakTerasing('m02-pengawas');
+            }
+            if (modulAktif === '03') {
+                if (sub03Aktif === 'harian' && (db.harianRekod || []).length) return cetakTerasing('m03-harian-item', 0);
+                if (sub03Aktif === 'rollcall' && (db.rollCallRekod || []).length) return cetakTerasing('m03-rollcall-item', 0);
+                if (sub03Aktif === 'kesihatan' && (db.kesKesihatan || []).length) return cetakTerasing('m03-kesihatan-item', 0);
+                if (sub03Aktif === 'prep' && (db.prepRekod || []).length) return cetakTerasing('m03-prep-item', 0);
+            }
+            if (modulAktif === '04') {
+                if (sub04Aktif === 'direktori') return cetakTerasing('m04-direktori');
+                if (sub04Aktif === 'kes' && (db.kesKecemasan || []).length) return cetakTerasing('m04-kes-item', 0);
+                if (sub04Aktif === 'kerosakan' && (db.aduanKerosakan || []).length) return cetakTerasing('m04-rosak-item', 0);
+            }
+
+            document.body.classList.add('printing-isolated');
+            const stage = document.getElementById('print-isolated-stage');
+            stage.innerHTML = rangkaCetakan(
+                '00 Dashboard — Ringkasan Sistem Pengurusan Asrama SMK Tabuan Jaya',
+                `<p style="font-size:12px;">Jumlah Penghuni: <strong>${document.getElementById('dash-occ')?.innerText || '-'} / ${document.getElementById('dash-cap')?.innerText || '-'}</strong> (${document.getElementById('dash-split')?.innerText || ''})</p>
+                 <p style="font-size:12px;margin-top:6px;">Warden Bertugas: <strong>${document.getElementById('dash-duty-main')?.innerText || '-'}</strong> &bull; Standby: <strong>${document.getElementById('dash-duty-sub')?.innerText || '-'}</strong></p>`
+            );
+            const bersihkan = () => {
+                stage.innerHTML = '';
+                document.body.classList.remove('printing-isolated');
+                window.removeEventListener('afterprint', bersihkan);
+            };
+            window.addEventListener('afterprint', bersihkan);
+            window.print();
+            setTimeout(bersihkan, 800);
+        }
+
+        function paparSemua() {
+            paparDashboard();
+            paparModul01();
+            paparModul02();
+            paparModul03();
+            paparModul04();
+        }
+
+        paparSemua();
+        kemaskiniPaparanSesi();
+    </script>
+</body>
+</html>
